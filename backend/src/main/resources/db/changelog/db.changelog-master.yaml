@@ -1,0 +1,340 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-categories
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        not:
+          tableExists:
+            tableName: categories
+      changes:
+        - createTable:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  type: INTEGER
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: type
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: rank
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+
+
+  - changeSet:
+      id: 002-create-budget-items
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        not:
+          tableExists:
+            tableName: budget_items
+      changes:
+        - createTable:
+            tableName: budget_items
+            columns:
+              - column:
+                  name: id
+                  type: INTEGER
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: amount
+                  type: DECIMAL(14,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: type
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: frequency
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: start_date
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: end_date
+                  type: DATE
+              - column:
+                  name: category_id
+                  type: INTEGER
+
+  - changeSet:
+      id: 002b-budget-items-fk
+      author: codex
+      dbms: "!sqlite"
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: budget_items
+            baseColumnNames: category_id
+            referencedTableName: categories
+            referencedColumnNames: id
+            constraintName: fk_budget_items_category
+            validate: false
+            deferrable: false
+            initiallyDeferred: false
+            onDelete: SET NULL
+            onUpdate: RESTRICT
+            remarks: "SQLite ignores addForeignKeyConstraint in Liquibase."
+
+  - changeSet:
+      id: 003-seed-default-categories
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        sqlCheck:
+          expectedResult: 0
+          sql: SELECT COUNT(*) FROM categories
+      changes:
+        - sql:
+            splitStatements: true
+            endDelimiter: ;
+            sql: |
+              INSERT INTO categories (name, type, rank)
+              VALUES
+                ('Gehalt', 'INCOME', 1),
+                ('Kindergeld', 'INCOME', 2),
+                ('Elterngeld', 'INCOME', 3),
+                ('Geschenke', 'INCOME', 4),
+                ('Bonuszahlungen', 'INCOME', 5),
+                ('Krankengeld', 'INCOME', 6);
+
+              INSERT INTO categories (name, type, rank)
+              VALUES
+                ('Wohnen', 'EXPENSE', 7),
+                ('Kommunikation', 'EXPENSE', 8),
+                ('Versicherungen', 'EXPENSE', 9),
+                ('Unterhaltung', 'EXPENSE', 10),
+                ('Lebenshaltungskosten', 'EXPENSE', 11),
+                ('Vorsorgen/Sparen', 'EXPENSE', 12),
+                ('Freizeit', 'EXPENSE', 13);
+
+  - changeSet:
+      id: 004-create-persons
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        not:
+          tableExists:
+            tableName: persons
+      changes:
+        - createTable:
+            tableName: persons
+            columns:
+              - column:
+                  name: id
+                  type: INTEGER
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+                    unique: true
+
+  - changeSet:
+      id: 004b-seed-default-persons
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        sqlCheck:
+          expectedResult: 0
+          sql: SELECT COUNT(*) FROM persons
+      changes:
+        - sql:
+            splitStatements: true
+            endDelimiter: ;
+            sql: |
+              INSERT INTO persons (name)
+              VALUES
+                ('Person 1'),
+                ('Person 2');
+
+  - changeSet:
+      id: 005-add-person-id-to-budget-items
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        not:
+          columnExists:
+            tableName: budget_items
+            columnName: person_id
+      changes:
+        - addColumn:
+            tableName: budget_items
+            columns:
+              - column:
+                  name: person_id
+                  type: INTEGER
+
+  - changeSet:
+      id: 005b-budget-items-person-fk
+      author: codex
+      dbms: "!sqlite"
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: budget_items
+            baseColumnNames: person_id
+            referencedTableName: persons
+            referencedColumnNames: id
+            constraintName: fk_budget_items_person
+            validate: false
+            deferrable: false
+            initiallyDeferred: false
+            onDelete: SET NULL
+            onUpdate: RESTRICT
+            remarks: "SQLite ignores addForeignKeyConstraint in Liquibase."
+
+  - changeSet:
+      id: 006-add-budget-items-active
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        not:
+          columnExists:
+            tableName: budget_items
+            columnName: active
+      changes:
+        - addColumn:
+            tableName: budget_items
+            columns:
+              - column:
+                  name: active
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 006b-backfill-budget-items-active
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        columnExists:
+          tableName: budget_items
+          columnName: active
+      changes:
+        - sql:
+            splitStatements: true
+            endDelimiter: ;
+            sql: |
+              UPDATE budget_items
+              SET active = TRUE
+              WHERE active IS NULL;
+
+  - changeSet:
+      id: 007-add-budget-items-planned
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        not:
+          columnExists:
+            tableName: budget_items
+            columnName: planned
+      changes:
+        - addColumn:
+            tableName: budget_items
+            columns:
+              - column:
+                  name: planned
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 007b-backfill-budget-items-planned
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        columnExists:
+          tableName: budget_items
+          columnName: planned
+      changes:
+        - sql:
+            splitStatements: true
+            endDelimiter: ;
+            sql: |
+              UPDATE budget_items
+              SET planned = TRUE
+              WHERE planned IS NULL;
+
+  - changeSet:
+      id: 008-add-budget-items-category-correction
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        not:
+          columnExists:
+            tableName: budget_items
+            columnName: category_correction
+      changes:
+        - addColumn:
+            tableName: budget_items
+            columns:
+              - column:
+                  name: category_correction
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 008b-backfill-budget-items-category-correction
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        columnExists:
+          tableName: budget_items
+          columnName: category_correction
+      changes:
+        - sql:
+            splitStatements: true
+            endDelimiter: ;
+            sql: |
+              UPDATE budget_items
+              SET category_correction = FALSE
+              WHERE category_correction IS NULL;

@@ -1,0 +1,39 @@
+services:
+  backend:
+    image: gradle:8.5-jdk17
+    working_dir: /app
+    command: ["./gradlew", "bootRun"]
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/fairshare
+      SPRING_DATASOURCE_USERNAME: fairshare
+      SPRING_DATASOURCE_PASSWORD: fairshare
+    volumes:
+      - ./backend:/app
+      - gradle-cache:/home/gradle/.gradle
+    depends_on:
+      - db
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: fairshare
+      POSTGRES_USER: fairshare
+      POSTGRES_PASSWORD: fairshare
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+  frontend:
+    image: node:20-alpine
+    working_dir: /app
+    command: ["sh", "-c", "npm install && npm run dev -- --host 0.0.0.0"]
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - frontend-node-modules:/app/node_modules
+volumes:
+  gradle-cache:
+  frontend-node-modules:
+  postgres-data:

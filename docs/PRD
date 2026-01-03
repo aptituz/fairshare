@@ -1,0 +1,421 @@
+# 📄 Product Requirements Document (PRD)
+
+## Product Name
+
+**Fairshare — Simple Budget Planner**
+
+---
+
+## 1. Goal & Purpose
+
+Fairshare allows users to plan the finances of a household, including planning
+recurring income and expense (budget items) both on a personal and shared level.
+It then is supposed to calculate some things:
+
+- Total monthly income (both per person and shared)
+- Total monthly expenses (both per person and shared)
+- The net result
+- A cost split for shared expenses
+
+Fairshare is a **planning tool**, not an accounting system. However, it allows
+to track actual values for budget items and will take those into account
+for statistics and forecasting.
+---
+
+## Definitions
+
+Total income: the sum of all income (personal and shared), including one-time payments and adjustments
+Total income without one-time payments: Total income excluding unplanned one-time income (planned = false)
+Total expenses: the sum of all expenses (personal and shared), including one-time payments and adjustments
+Total shared expenses: the sum of shared expenses (person_id = null), including one-time payments and adjustments
+Net result: Total income minus Total expenses
+Net result (shared): the difference between Total income without one-time payments and Total shared expenses
+Shared income total (sharedIncomeTotal): total income from shared budget items
+Shared expense total (sharedExpenseTotal): total expenses from shared budget items (same as Total shared expenses)
+
+Shared budget item: a budget item (income or expense) that is not assigned to a specific person
+Personal budget item: a budget item (income or expense) that is assigned and counted toward that person
+Monthly amount (of a budget item): the normalized monthly value derived from frequency rules (before sign)
+
+
+Planned (budget) item: a budget item that has been planned upfront (the default)
+Actual (budget) item: a budget item which has planned = false where the value differs from the planning for a specific month (also known as month override)
+Category correction: a total for a category where the value differs from the planning for a specific month without tracking value for individual budget items
+
+Personal retention value (Selbstbehalt): personal expenses kept by a person before cost split (reported as personalExpenses in costSplit)
+Personal usable income: personal income minus personal retention value
+Total pool: sharedIncomeTotal plus the sum of personal usable income
+Budget per person: (totalPool - sharedExpenseTotal) / numberOfPersons when totalPool >= sharedExpenseTotal
+Personal contribution: personal usable income minus budget per person (when equal budget is possible)
+Cost split (Kostenverteilung): the set of per-person personal contribution values and remaining budgets
+
+
+## 2. Scope (MVP)
+
+### In Scope
+
+✔ Category management
+✔ Budget item management (recurring income/expense)
+✔ Person management (shared vs personal items)
+✔ Monthly budget calculation
+✔ Summary display:
+
+* Total income
+* Expenses grouped by category
+* Total expenses
+* Net result
+* Kostenverteilung (cost split) based on shared expenses and personal budgets
+
+### Out of Scope (for now)
+
+✖ Multiple users/households
+✖ Historical tracking
+✖ Bank import
+✖ Authentication
+✖ Advanced forecasting
+✖ Currency handling beyond a single default
+
+### Localization Requirement
+
+The user-facing UI must be in **German**. Code, schema, and APIs remain in English.
+
+---
+
+## 3. Tech Stack & Architecture
+
+### 3.1 System Overview
+
+Fairshare consists of:
+
+1. **Backend Service**
+
+   * Kotlin
+   * Spring Boot
+   * REST API
+   * **PostgreSQL database**
+
+2. **Frontend**
+
+   * Vue.js
+
+3. **Container Runtime**
+
+   * docker-compose
+   * runs backend + frontend together
+
+PostgreSQL runs as a separate service.
+
+---
+
+### 3.2 Architecture Diagram (Conceptual)
+
+```
+Browser (Vue.js)
+        |
+        v
+REST API (Spring Boot — Kotlin)
+        |
+        v
+PostgreSQL (database)
+```
+
+---
+
+## 4. Data Model
+
+### 4.1 Table: `categories`
+
+Stores income/expense categories used for budget items.
+
+| Field | Type                  | Description                             |
+| ----- | --------------------- | --------------------------------------- |
+| id    | PK                    | unique id                               |
+| name  | string                | e.g. Rent, Salary                       |
+| type  | enum("INCOME","EXPENSE") | category type                           |
+| rank  | int                   | ordering for display (lower = earlier) |
+
+---
+
+### 4.2 Table: `persons`
+
+Stores people for shared budgets.
+
+| Field | Type   | Description |
+| ----- | ------ | ----------- |
+| id    | PK     | unique id   |
+| name  | string | display name|
+
+---
+
+### 4.3 Table: `budget_items`
+
+Stores every recurring payment once.
+
+| Field       | Type                              | Description                    |
+| ----------- | --------------------------------- | ------------------------------ |
+| id          | PK                                | unique id                      |
+| type        | enum("INCOME","EXPENSE")          | item direction                 |
+| name        | string                            | e.g. Rent, Salary              |
+| category_id | FK                                | → categories.id                |
+| person_id   | FK/null                           | → persons.id (null = shared)   |
+| amount      | decimal                           | always positive                |
+| frequency   | enum("MONTHLY","ONE_TIME","QUARTERLY","HALF_YEARLY","YEARLY") | recurrence pattern |
+| start_date  | date                              | start date                     |
+| end_date    | date/null                         | optional end date              |
+| active      | boolean                           | included in calculations       |
+| planned     | boolean                           | planned vs actual item         |
+
+> **Note:**
+> Sign is not stored — direction is defined via `type`. Planned items (`planned = true`) are regular recurring items; actual items (`planned = false`) represent month overrides.
+
+---
+
+## 5. Monthly Budget Calculation
+
+The system calculates an **average monthly value** for each budget item.
+All calculations happen on the **backend** and the frontend only renders results.
+
+### 5.1 Monthly Conversion Rules
+
+| Frequency   | Monthly Amount                |
+| ----------- | ----------------------------- |
+| MONTHLY     | `amount`                      |
+| ONE_TIME    | `amount` (only in that month) |
+| QUARTERLY   | `amount / 3`                  |
+| HALF_YEARLY | `amount / 6`                  |
+| YEARLY      | `amount / 12`                 |
+
+Income → positive
+Expenses → negative
+
+`start_date` / `end_date` define inclusion for a given month.
+
+---
+
+### 5.2 Aggregation
+
+#### Total Income
+
+Sum of positive monthly values.
+
+#### Expenses/Income By Category
+
+Group by `category_id`, sum monthly values.
+
+#### Total Expenses
+
+Sum of all expense category totals (absolute basis).
+
+#### Net Result
+
+```
+net = totalIncome - totalExpenses
+```
+
+Net > 0 → surplus
+Net < 0 → deficit
+
+#### Per-Person Totals
+
+Group by `person_id` (null represents "Gemeinsam").
+
+#### Kostenverteilung (Cost Split)
+
+Goal: everyone contributes a fair share to shared expenses and ends up with the same remaining personal budget. If that is not possible, each person keeps at least their personal expenses and contributes the rest of their income.
+
+Definitions:
+- `retention_i = personalExpenses_i`
+- `usable_i = personalIncome_i - retention_i`
+- `totalPool = sharedIncomeTotal + sum(usable_i)`
+
+Case A — equal budget possible (`totalPool >= sharedExpenseTotal`):
+1. `budgetPerPerson = (totalPool - sharedExpenseTotal) / numberOfPersons`
+2. `personalContribution_i = usable_i - budgetPerPerson`
+3. Remaining personal budget after shared expenses: `retention_i + budgetPerPerson`
+
+Case B — equal budget not possible (`totalPool < sharedExpenseTotal`):
+1. `personalContribution_i = max(0, usable_i)`
+2. Remaining personal budget: `retention_i + min(0, usable_i)`
+
+This ensures both persons end with the same remaining budget when possible, and otherwise keep at least their personal expenses.
+
+---
+
+## 6. REST API (MVP)
+
+### Categories
+
+```
+GET /api/categories
+POST /api/categories
+PUT /api/categories/{id}
+DELETE /api/categories/{id}
+```
+
+### Budget Items
+
+```
+GET /api/budget-items
+POST /api/budget-items
+PUT /api/budget-items/{id}
+DELETE /api/budget-items/{id}
+POST /api/budget-items/{id}/month-override
+POST /api/budget-items/category-correction
+```
+
+### Persons
+
+```
+GET /api/persons
+POST /api/persons
+PUT /api/persons/{id}
+```
+
+### Monthly Summary
+
+```
+GET /api/budget/monthly-summary
+```
+
+Response example:
+
+```json
+{
+  "totalIncome": 4200,
+  "totalIncomeRecurring": 4200,
+  "totalExpenses": 2900,
+  "netResult": 1300,
+  "netResultShared": 4200,
+  "expensesByCategory": [
+    { "categoryName": "Rent", "monthlyAmount": 1200 }
+  ],
+  "incomeByCategory": [
+    { "categoryName": "Salary", "monthlyAmount": 4200 }
+  ],
+  "incomeByBudgetItem": [],
+  "expensesByBudgetItem": [],
+  "incomeByPerson": [],
+  "expensesByPerson": [],
+  "sharedIncomeTotal": 0,
+  "sharedExpenseTotal": 0,
+  "budgetPerPerson": 0,
+  "costSplit": []
+}
+}
+```
+
+---
+
+## 7. Frontend Requirements (Vue.js)
+
+### 7.1 Screens
+
+#### Overview
+
+Shows the monthly summary (income, expenses, net result) and grouped lists:
+* Income grouped by person
+* Expenses grouped by category and person
+
+#### Kostenverteilung
+
+Shows the backend-calculated cost split with transparent intermediate values, including Net result (shared).
+
+#### Datenerfassung (Budget Items)
+
+* list existing entries
+* add shared income/expense
+* add per-person income/expense
+* add actual item (month override) for a specific item and month
+* fields:
+
+  * name (expenses only)
+  * category
+  * amount
+  * type
+  * frequency (monthly, quarterly, half-yearly, yearly, one-time)
+  * start/end month for recurring items
+  * one-time month for one-time items
+  * optional category correction (Ist-Betrag) per month
+
+#### Stammdaten
+
+* categories split by income/expense
+* persons list with inline rename
+
+### 7.2 Layout & UI
+
+* Vuetify baseline layout with left navigation
+* Global month/year selector that controls all views
+* All user-facing strings in German
+
+---
+
+## 8. Deployment — docker-compose
+
+### Requirements
+
+* Single command start:
+
+```
+docker-compose up
+```
+
+* Services:
+
+  * backend (Spring Boot)
+  * frontend (Vue.js)
+  * postgres
+
+---
+
+## 9. Security (MVP)
+
+* No authentication
+* Local usage model
+* CORS permitted for frontend
+
+---
+
+## 10. Testing
+
+### Backend
+
+* Unit tests for calculation
+* Simple integration tests
+
+### Frontend
+
+* Basic UX verification
+
+---
+
+## 11. Acceptance Criteria
+
+✔ Users can create categories
+✔ Users can create recurring budget items
+✔ API returns correct monthly summary
+✔ Expenses grouped by category
+✔ Net result displayed
+✔ docker-compose launches full stack
+✔ PostgreSQL persists data
+
+---
+
+## 12. Known Limitations
+
+* Not multi-tenant
+* Limited concurrency
+* PostgreSQL availability required
+* Monthly estimation, not exact calendar computation
+
+---
+
+## 13. Future Roadmap (Optional)
+
+* Per-month simulation (honor start/end dates)
+* Bank import
+* Authentication
+* Multiple users/households
+* Savings goals
+* Category hierarchies
+* Mobile UI
