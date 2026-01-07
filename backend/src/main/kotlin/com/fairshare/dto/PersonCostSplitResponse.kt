@@ -8,5 +8,6 @@ data class PersonCostSplitResponse(
     val personalIncome: BigDecimal,
     val personalExpenses: BigDecimal,
     val personalUsableIncome: BigDecimal,
+    val personalCostShare: BigDecimal,
     val personalContribution: BigDecimal
 )

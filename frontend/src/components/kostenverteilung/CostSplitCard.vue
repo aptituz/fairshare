@@ -59,7 +59,7 @@
             </div>
             <div class="d-flex align-center justify-space-between">
               <span>Kostenanteil</span>
-              <span>{{ formatCurrency(summary?.budgetPerPerson) }}</span>
+              <span>{{ formatCurrency(entry.personalCostShare) }}</span>
             </div>
             <div class="d-flex align-center justify-space-between font-weight-bold">
               <span>Ueberweisung an Gemeinschaftskonto</span>

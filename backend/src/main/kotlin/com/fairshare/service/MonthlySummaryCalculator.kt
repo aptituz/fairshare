@@ -133,13 +133,20 @@ class MonthlySummaryCalculator {
             val income = personalIncomeTotals[person.id] ?: BigDecimal.ZERO
             val expenses = personalExpenseTotals[person.id] ?: BigDecimal.ZERO
             val personalUsableIncome = personalUsableIncomes[person.id] ?: BigDecimal.ZERO
+            val personalCostShare = income.subtract(budgetPerPerson)
+            val personalContribution = if (personalUsableIncome > personalCostShare) {
+                personalCostShare
+            } else {
+                personalUsableIncome.max(BigDecimal.ZERO)
+            }
             PersonCostSplitResponse(
                 personId = person.id,
                 name = person.name,
                 personalIncome = income,
                 personalExpenses = expenses,
                 personalUsableIncome = personalUsableIncome,
-                personalContribution = personalUsableIncome.subtract(budgetPerPerson)
+                personalCostShare = personalCostShare,
+                personalContribution = personalContribution
             )
         }
 

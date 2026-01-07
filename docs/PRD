@@ -224,18 +224,18 @@ Group by `person_id` (null represents "Gemeinsam").
 Goal: everyone contributes a fair share to shared expenses and ends up with the same remaining personal budget. If that is not possible, each person keeps at least their personal expenses and contributes the rest of their income.
 
 Definitions:
-- `retention_i = personalExpenses_i`
-- `usable_i = personalIncome_i - retention_i`
-- `totalPool = sharedIncomeTotal + sum(usable_i)`
+- `personalRetentionValue = personalExpenses`
+- `budgetPerPerson` = netResultShared / numberOfPersons
+- `personalUsableIncome = personalIncome - personalRetentionValue`
+- `personalCostShare = personalIncome - budgetPerPerson`
 
-Case A — equal budget possible (`totalPool >= sharedExpenseTotal`):
-1. `budgetPerPerson = (totalPool - sharedExpenseTotal) / numberOfPersons`
-2. `personalContribution_i = usable_i - budgetPerPerson`
-3. Remaining personal budget after shared expenses: `retention_i + budgetPerPerson`
+Case A — personalUsableIncome > personalCostShare
+1. `personalContribution_i = personalCostShare`
+2. Remaining personal budget after shared expenses: `budgetPerPerson`
 
-Case B — equal budget not possible (`totalPool < sharedExpenseTotal`):
-1. `personalContribution_i = max(0, usable_i)`
-2. Remaining personal budget: `retention_i + min(0, usable_i)`
+Case B — personalUsableIncome < personalCostShare
+1. `personalContribution_i = max(0, personalUsableIncome)`
+2. Remaining personal budget: `personalIncome - personalContribution_i`
 
 This ensures both persons end with the same remaining budget when possible, and otherwise keep at least their personal expenses.
 
