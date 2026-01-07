@@ -12,10 +12,11 @@ import com.fairshare.model.Frequency
 import com.fairshare.model.Person
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
-import java.math.RoundingMode
 
 @Service
-class MonthlySummaryCalculator {
+class MonthlySummaryCalculator(
+    private val costSplitCalculator: CostSplitCalculator
+) {
     fun calculate(
         incomeItems: List<BudgetItem>,
         expenseItems: List<BudgetItem>,
@@ -118,37 +119,15 @@ class MonthlySummaryCalculator {
             .groupBy { it.personId }
             .mapValues { (_, items) -> items.fold(BigDecimal.ZERO) { acc, item -> acc.add(item.monthlyAmount) } }
 
-        val personalUsableIncomes = persons.associate { person ->
-            val income = personalIncomeTotals[person.id] ?: BigDecimal.ZERO
-            val expenses = personalExpenseTotals[person.id] ?: BigDecimal.ZERO
-            person.id to income.subtract(expenses)
-        }
         val netResultShared = totalIncomeRecurring.subtract(sharedExpenseTotal)
-        val budgetPerPerson = if (persons.isEmpty()) {
-            BigDecimal.ZERO
-        } else {
-            netResultShared.divide(BigDecimal(persons.size), 2, RoundingMode.HALF_UP)
-        }
-        val costSplit = persons.map { person ->
-            val income = personalIncomeTotals[person.id] ?: BigDecimal.ZERO
-            val expenses = personalExpenseTotals[person.id] ?: BigDecimal.ZERO
-            val personalUsableIncome = personalUsableIncomes[person.id] ?: BigDecimal.ZERO
-            val personalCostShare = income.subtract(budgetPerPerson)
-            val personalContribution = if (personalUsableIncome > personalCostShare) {
-                personalCostShare
-            } else {
-                personalUsableIncome.max(BigDecimal.ZERO)
-            }
-            PersonCostSplitResponse(
-                personId = person.id,
-                name = person.name,
-                personalIncome = income,
-                personalExpenses = expenses,
-                personalUsableIncome = personalUsableIncome,
-                personalCostShare = personalCostShare,
-                personalContribution = personalContribution
-            )
-        }
+        val costSplitResult = costSplitCalculator.calculate(
+            persons = persons,
+            personalIncomeTotals = personalIncomeTotals,
+            personalExpenseTotals = personalExpenseTotals,
+            sharedIncomeTotal = sharedIncomeTotal,
+            sharedExpenseTotal = sharedExpenseTotal,
+            netResultShared = netResultShared
+        )
 
         return MonthlySummaryResponse(
             totalIncome = totalIncome,
@@ -162,10 +141,10 @@ class MonthlySummaryCalculator {
             incomeByPerson = incomeByPerson,
             expensesByPerson = expensesByPerson,
             expensesByBudgetItem = expensesByBudgetItem,
-            sharedIncomeTotal = sharedIncomeTotal,
-            sharedExpenseTotal = sharedExpenseTotal,
-            budgetPerPerson = budgetPerPerson,
-            costSplit = costSplit
+            sharedIncomeTotal = costSplitResult.sharedIncomeTotal,
+            sharedExpenseTotal = costSplitResult.sharedExpenseTotal,
+            budgetPerPerson = costSplitResult.budgetPerPerson,
+            costSplit = costSplitResult.costSplit
         )
     }
 }
