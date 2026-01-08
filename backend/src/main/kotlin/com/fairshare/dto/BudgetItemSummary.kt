@@ -11,5 +11,5 @@ data class BudgetItemSummary(
     val personName: String,
     val categoryId: Long?,
     val categoryName: String,
-    val frequency: Frequency
+    val frequency: Frequency,
 )

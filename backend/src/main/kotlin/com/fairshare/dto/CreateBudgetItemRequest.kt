@@ -1,7 +1,7 @@
 package com.fairshare.dto
 
-import com.fairshare.model.Frequency
 import com.fairshare.model.BudgetItemType
+import com.fairshare.model.Frequency
 import java.math.BigDecimal
 import java.time.LocalDate
 
@@ -15,5 +15,5 @@ data class CreateBudgetItemRequest(
     val active: Boolean? = null,
     val planned: Boolean? = null,
     val startDate: LocalDate? = null,
-    val endDate: LocalDate? = null
+    val endDate: LocalDate? = null,
 )

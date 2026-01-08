@@ -9,8 +9,11 @@ import java.time.LocalDate
 
 interface BudgetItemRepository : JpaRepository<BudgetItem, Long> {
     fun findByType(type: BudgetItemType): List<BudgetItem>
+
     fun findByTypeAndActiveTrue(type: BudgetItemType): List<BudgetItem>
+
     fun findByActiveTrue(): List<BudgetItem>
+
     @Query(
         """
         select b
@@ -19,13 +22,14 @@ interface BudgetItemRepository : JpaRepository<BudgetItem, Long> {
           and b.type = :type
           and b.startDate <= :monthEnd
           and (b.endDate is null or b.endDate >= :monthStart)
-        """
+        """,
     )
     fun findActiveForMonth(
         @Param("type") type: BudgetItemType,
         @Param("monthStart") monthStart: LocalDate,
-        @Param("monthEnd") monthEnd: LocalDate
+        @Param("monthEnd") monthEnd: LocalDate,
     ): List<BudgetItem>
+
     @Query(
         """
         select b
@@ -37,15 +41,16 @@ interface BudgetItemRepository : JpaRepository<BudgetItem, Long> {
           and b.startDate <= :monthEnd
           and (b.endDate is null or b.endDate >= :monthStart)
           and ((:personId is null and b.person is null) or b.person.id = :personId)
-        """
+        """,
     )
     fun findPlannedForCategoryAndMonth(
         @Param("type") type: BudgetItemType,
         @Param("categoryId") categoryId: Long,
         @Param("personId") personId: Long?,
         @Param("monthStart") monthStart: LocalDate,
-        @Param("monthEnd") monthEnd: LocalDate
+        @Param("monthEnd") monthEnd: LocalDate,
     ): List<BudgetItem>
+
     @Query(
         """
         select b
@@ -58,14 +63,15 @@ interface BudgetItemRepository : JpaRepository<BudgetItem, Long> {
           and b.startDate <= :monthEnd
           and (b.endDate is null or b.endDate >= :monthStart)
           and ((:personId is null and b.person is null) or b.person.id = :personId)
-        """
+        """,
     )
     fun findUnplannedForCategoryAndMonth(
         @Param("type") type: BudgetItemType,
         @Param("categoryId") categoryId: Long,
         @Param("personId") personId: Long?,
         @Param("monthStart") monthStart: LocalDate,
-        @Param("monthEnd") monthEnd: LocalDate
+        @Param("monthEnd") monthEnd: LocalDate,
     ): List<BudgetItem>
-    fun existsByCategory_Id(categoryId: Long): Boolean
+
+    fun existsByCategoryId(categoryId: Long): Boolean
 }

@@ -21,43 +21,32 @@ class BudgetItem(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null,
-
     @Column(nullable = false)
     var name: String,
-
     @Column(nullable = false, precision = 14, scale = 2)
     var amount: BigDecimal,
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     var type: BudgetItemType,
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     var frequency: Frequency = Frequency.MONTHLY,
-
     @Column(nullable = false)
     var active: Boolean = true,
-
     @Column(nullable = false)
     var planned: Boolean = true,
-
     @Column(name = "category_correction", nullable = false)
     var categoryCorrection: Boolean = false,
-
     @Column(name = "start_date", nullable = false)
     var startDate: LocalDate = LocalDate.now(),
-
     @Column(name = "end_date")
     var endDate: LocalDate? = null,
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     var category: Category? = null,
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "person_id")
-    var person: Person? = null
+    var person: Person? = null,
 ) {
     fun monthlyAmount(): BigDecimal =
         when (frequency) {

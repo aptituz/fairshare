@@ -21,31 +21,31 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/categories")
 @Tag(name = "Categories", description = "Manage budget categories.")
 class CategoryController(
-    private val categoryService: CategoryService
+    private val categoryService: CategoryService,
 ) {
     @GetMapping
     @Operation(summary = "List categories")
-    fun list(): List<CategoryResponse> =
-        categoryService.list()
+    fun list(): List<CategoryResponse> = categoryService.list()
 
     @PostMapping
     @Operation(summary = "Create a category")
-    fun create(@RequestBody request: CreateCategoryRequest): CategoryResponse {
-        return categoryService.create(request)
-    }
+    fun create(
+        @RequestBody request: CreateCategoryRequest,
+    ): CategoryResponse = categoryService.create(request)
 
     @PutMapping("/{id}")
     @Operation(summary = "Rename a category")
     fun update(
         @PathVariable id: Long,
-        @RequestBody request: UpdateCategoryRequest
-    ): CategoryResponse =
-        categoryService.update(id, request)
+        @RequestBody request: UpdateCategoryRequest,
+    ): CategoryResponse = categoryService.update(id, request)
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Delete a category")
-    fun delete(@PathVariable id: Long) {
+    fun delete(
+        @PathVariable id: Long,
+    ) {
         categoryService.delete(id)
     }
 }

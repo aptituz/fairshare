@@ -17,5 +17,5 @@ data class MonthlySummaryResponse(
     val sharedIncomeTotal: BigDecimal,
     val sharedExpenseTotal: BigDecimal,
     val budgetPerPerson: BigDecimal,
-    val costSplit: List<PersonCostSplitResponse>
+    val costSplit: List<PersonCostSplitResponse>,
 )

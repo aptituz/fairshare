@@ -17,15 +17,17 @@ class MonthlySummaryCalculatorTest {
         val personA = Person(id = 1, name = "Alex")
         val personB = Person(id = 2, name = "Bo")
 
-        val incomeItems = listOf(
-            budgetItem("Income A", "3000.00", BudgetItemType.INCOME, personA),
-            budgetItem("Income B", "2000.00", BudgetItemType.INCOME, personB)
-        )
-        val expenseItems = listOf(
-            budgetItem("Personal A", "500.00", BudgetItemType.EXPENSE, personA),
-            budgetItem("Personal B", "500.00", BudgetItemType.EXPENSE, personB),
-            budgetItem("Shared", "1000.00", BudgetItemType.EXPENSE, null)
-        )
+        val incomeItems =
+            listOf(
+                budgetItem("Income A", "3000.00", BudgetItemType.INCOME, personA),
+                budgetItem("Income B", "2000.00", BudgetItemType.INCOME, personB),
+            )
+        val expenseItems =
+            listOf(
+                budgetItem("Personal A", "500.00", BudgetItemType.EXPENSE, personA),
+                budgetItem("Personal B", "500.00", BudgetItemType.EXPENSE, personB),
+                budgetItem("Shared", "1000.00", BudgetItemType.EXPENSE, null),
+            )
 
         val summary = calculator.calculate(incomeItems, expenseItems, listOf(personA, personB))
 
@@ -46,15 +48,17 @@ class MonthlySummaryCalculatorTest {
         val personA = Person(id = 1, name = "Alex")
         val personB = Person(id = 2, name = "Bo")
 
-        val incomeItems = listOf(
-            budgetItem("Income A", "2000.00", BudgetItemType.INCOME, personA),
-            budgetItem("Income B", "1500.00", BudgetItemType.INCOME, personB)
-        )
-        val expenseItems = listOf(
-            budgetItem("Personal A", "800.00", BudgetItemType.EXPENSE, personA),
-            budgetItem("Personal B", "1000.00", BudgetItemType.EXPENSE, personB),
-            budgetItem("Shared", "2900.00", BudgetItemType.EXPENSE, null)
-        )
+        val incomeItems =
+            listOf(
+                budgetItem("Income A", "2000.00", BudgetItemType.INCOME, personA),
+                budgetItem("Income B", "1500.00", BudgetItemType.INCOME, personB),
+            )
+        val expenseItems =
+            listOf(
+                budgetItem("Personal A", "800.00", BudgetItemType.EXPENSE, personA),
+                budgetItem("Personal B", "1000.00", BudgetItemType.EXPENSE, personB),
+                budgetItem("Shared", "2900.00", BudgetItemType.EXPENSE, null),
+            )
 
         val summary = calculator.calculate(incomeItems, expenseItems, listOf(personA, personB))
 
@@ -74,7 +78,7 @@ class MonthlySummaryCalculatorTest {
         name: String,
         amount: String,
         type: BudgetItemType,
-        person: Person?
+        person: Person?,
     ): BudgetItem =
         BudgetItem(
             name = name,
@@ -87,10 +91,13 @@ class MonthlySummaryCalculatorTest {
             startDate = LocalDate.of(2025, 3, 1),
             endDate = null,
             category = null,
-            person = person
+            person = person,
         )
 
-    private fun assertBigDecimalEquals(expected: String, actual: BigDecimal) {
+    private fun assertBigDecimalEquals(
+        expected: String,
+        actual: BigDecimal,
+    ) {
         assertEquals(0, BigDecimal(expected).compareTo(actual), "Expected $expected but was $actual")
     }
 }

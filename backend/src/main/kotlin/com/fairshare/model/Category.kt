@@ -15,14 +15,11 @@ class Category(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null,
-
     @Column(nullable = false, unique = true)
     var name: String,
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     var type: BudgetItemType,
-
     @Column(nullable = false)
-    var rank: Int
+    var rank: Int,
 )

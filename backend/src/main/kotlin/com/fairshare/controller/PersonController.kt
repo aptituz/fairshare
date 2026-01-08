@@ -18,24 +18,22 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/persons")
 @Tag(name = "Persons", description = "Manage persons for shared budgets.")
 class PersonController(
-    private val personService: PersonService
+    private val personService: PersonService,
 ) {
     @GetMapping
     @Operation(summary = "List persons")
-    fun list(): List<PersonResponse> =
-        personService.list()
+    fun list(): List<PersonResponse> = personService.list()
 
     @PostMapping
     @Operation(summary = "Create a person")
-    fun create(@RequestBody request: CreatePersonRequest): PersonResponse {
-        return personService.create(request)
-    }
+    fun create(
+        @RequestBody request: CreatePersonRequest,
+    ): PersonResponse = personService.create(request)
 
     @PutMapping("/{id}")
     @Operation(summary = "Rename a person")
     fun update(
         @PathVariable id: Long,
-        @RequestBody request: UpdatePersonRequest
-    ): PersonResponse =
-        personService.update(id, request)
+        @RequestBody request: UpdatePersonRequest,
+    ): PersonResponse = personService.update(id, request)
 }

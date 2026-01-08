@@ -5,5 +5,5 @@ import java.math.BigDecimal
 data class CategoryExpenseSummary(
     val categoryId: Long?,
     val categoryName: String,
-    val monthlyAmount: BigDecimal
+    val monthlyAmount: BigDecimal,
 )

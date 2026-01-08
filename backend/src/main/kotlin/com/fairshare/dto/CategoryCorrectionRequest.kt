@@ -6,5 +6,5 @@ data class CategoryCorrectionRequest(
     val categoryId: Long,
     val month: String,
     val actualAmount: BigDecimal,
-    val personId: Long? = null
+    val personId: Long? = null,
 )

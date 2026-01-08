@@ -4,5 +4,5 @@ import com.fairshare.model.BudgetItemType
 
 data class CreateCategoryRequest(
     val name: String,
-    val type: BudgetItemType
+    val type: BudgetItemType,
 )

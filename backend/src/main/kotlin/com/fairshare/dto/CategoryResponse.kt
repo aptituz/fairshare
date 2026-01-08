@@ -6,5 +6,5 @@ data class CategoryResponse(
     val id: Long?,
     val name: String,
     val type: BudgetItemType,
-    val rank: Int
+    val rank: Int,
 )

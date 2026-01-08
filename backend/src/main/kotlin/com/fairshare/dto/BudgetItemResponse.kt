@@ -1,7 +1,7 @@
 package com.fairshare.dto
 
-import com.fairshare.model.Frequency
 import com.fairshare.model.BudgetItemType
+import com.fairshare.model.Frequency
 import java.math.BigDecimal
 import java.time.LocalDate
 
@@ -18,5 +18,5 @@ data class BudgetItemResponse(
     val startDate: LocalDate,
     val endDate: LocalDate?,
     val category: CategoryResponse?,
-    val person: PersonResponse?
+    val person: PersonResponse?,
 )

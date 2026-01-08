@@ -11,7 +11,7 @@ import java.time.YearMonth
 class BudgetService(
     private val budgetItemRepository: BudgetItemRepository,
     private val personRepository: PersonRepository,
-    private val monthlySummaryCalculator: MonthlySummaryCalculator
+    private val monthlySummaryCalculator: MonthlySummaryCalculator,
 ) {
     private val log = org.slf4j.LoggerFactory.getLogger(BudgetService::class.java)
 
@@ -20,16 +20,18 @@ class BudgetService(
         val monthEnd = month.atEndOfMonth()
         log.info("Calculating monthly summary for $month")
 
-        val incomeItems = budgetItemRepository.findActiveForMonth(
-            BudgetItemType.INCOME,
-            monthStart,
-            monthEnd
-        )
-        val expenseItems = budgetItemRepository.findActiveForMonth(
-            BudgetItemType.EXPENSE,
-            monthStart,
-            monthEnd
-        )
+        val incomeItems =
+            budgetItemRepository.findActiveForMonth(
+                BudgetItemType.INCOME,
+                monthStart,
+                monthEnd,
+            )
+        val expenseItems =
+            budgetItemRepository.findActiveForMonth(
+                BudgetItemType.EXPENSE,
+                monthStart,
+                monthEnd,
+            )
         val persons = personRepository.findAll()
         return monthlySummaryCalculator.calculate(incomeItems, expenseItems, persons)
     }

@@ -11,10 +11,9 @@ import org.springframework.web.server.ResponseStatusException
 
 @Service
 class PersonService(
-    private val personRepository: PersonRepository
+    private val personRepository: PersonRepository,
 ) {
-    fun list(): List<PersonResponse> =
-        personRepository.findAll().map { it.toResponse() }
+    fun list(): List<PersonResponse> = personRepository.findAll().map { it.toResponse() }
 
     fun create(request: CreatePersonRequest): PersonResponse {
         val name = request.name.trim()
@@ -25,10 +24,14 @@ class PersonService(
         return saved.toResponse()
     }
 
-    fun update(id: Long, request: UpdatePersonRequest): PersonResponse {
-        val person = personRepository.findById(id).orElseThrow {
-            ResponseStatusException(HttpStatus.NOT_FOUND, "Person $id not found")
-        }
+    fun update(
+        id: Long,
+        request: UpdatePersonRequest,
+    ): PersonResponse {
+        val person =
+            personRepository.findById(id).orElseThrow {
+                ResponseStatusException(HttpStatus.NOT_FOUND, "Person $id not found")
+            }
         val name = request.name.trim()
         if (name.isBlank()) {
             throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Person name cannot be blank")
@@ -38,7 +41,8 @@ class PersonService(
     }
 }
 
-private fun Person.toResponse(): PersonResponse = PersonResponse(
-    id = id,
-    name = name
-)
+private fun Person.toResponse(): PersonResponse =
+    PersonResponse(
+        id = id,
+        name = name,
+    )

@@ -5,5 +5,5 @@ enum class Frequency {
     ONE_TIME,
     QUARTERLY,
     HALF_YEARLY,
-    YEARLY
+    YEARLY,
 }
