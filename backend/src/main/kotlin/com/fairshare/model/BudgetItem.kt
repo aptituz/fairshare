@@ -37,8 +37,6 @@ class BudgetItem(
     @Column(nullable = false)
     var frequency: Frequency = Frequency.MONTHLY,
     @Column(nullable = false)
-    var active: Boolean = true,
-    @Column(nullable = false)
     var planned: Boolean = true,
     @Column(name = "category_correction", nullable = false)
     var categoryCorrection: Boolean = false,
@@ -52,6 +50,12 @@ class BudgetItem(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "person_id")
     var person: Person? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "previous_budget_item_id")
+    var previousBudgetItem: BudgetItem? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "root_budget_item_id")
+    var rootBudgetItem: BudgetItem? = null,
 ) {
     fun monthlyAmount(): BigDecimal =
         when (frequency) {

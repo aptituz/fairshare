@@ -6,9 +6,12 @@
 package com.fairshare.controller
 
 import com.fairshare.dto.BudgetItemOverrideRequest
+import com.fairshare.dto.BudgetItemHistoryEntryResponse
 import com.fairshare.dto.BudgetItemResponse
 import com.fairshare.dto.CategoryCorrectionRequest
 import com.fairshare.dto.CreateBudgetItemRequest
+import com.fairshare.dto.ResumeBudgetItemRequest
+import com.fairshare.dto.SuspendBudgetItemRequest
 import com.fairshare.dto.UpdateBudgetItemRequest
 import com.fairshare.model.BudgetItemType
 import com.fairshare.service.BudgetItemService
@@ -40,7 +43,10 @@ class BudgetItemController(
         @Parameter(description = "Filter by budget item type", example = "INCOME")
         @RequestParam(required = false)
         type: BudgetItemType?,
-    ): List<BudgetItemResponse> = budgetItemService.list(type)
+        @Parameter(description = "Filter by month (YYYY-MM)", example = "2025-03")
+        @RequestParam(required = false)
+        month: String?,
+    ): List<BudgetItemResponse> = budgetItemService.list(type, month)
 
     @PostMapping
     @Operation(summary = "Create a budget item")
@@ -61,6 +67,35 @@ class BudgetItemController(
         @PathVariable id: Long,
         @RequestBody request: BudgetItemOverrideRequest,
     ): BudgetItemResponse = budgetItemService.overrideForMonth(id, request)
+
+    @PostMapping("/{id}/suspend")
+    @Operation(summary = "Suspend a budget item for a specific period")
+    fun suspend(
+        @PathVariable id: Long,
+        @RequestBody request: SuspendBudgetItemRequest,
+    ): BudgetItemResponse = budgetItemService.suspendExpense(id, request)
+
+    @PostMapping("/{id}/resume")
+    @Operation(summary = "Resume a suspended budget item from a specific month")
+    fun resume(
+        @PathVariable id: Long,
+        @RequestBody request: ResumeBudgetItemRequest,
+    ): BudgetItemResponse = budgetItemService.resumeSuspendedExpense(id, request)
+
+    @GetMapping("/{id}/history")
+    @Operation(summary = "Get the history of related budget items")
+    fun history(
+        @PathVariable id: Long,
+    ): List<BudgetItemHistoryEntryResponse> = budgetItemService.historyWithSuspensions(id)
+
+    @DeleteMapping("/suspensions/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Delete a budget item suspension")
+    fun deleteSuspension(
+        @PathVariable id: Long,
+    ) {
+        budgetItemService.deleteSuspension(id)
+    }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

@@ -30,7 +30,7 @@ SPDX-License-Identifier: GPL-3.0-only
         <v-table density="compact">
           <thead>
             <tr>
-              <th colspan="9" class="text-left text-subtitle-1 font-weight-bold">
+              <th colspan="8" class="text-left text-subtitle-1 font-weight-bold">
                 {{ group.label }}
               </th>
             </tr>
@@ -42,19 +42,13 @@ SPDX-License-Identifier: GPL-3.0-only
               <th class="text-right">Halbjährlich</th>
               <th class="text-right">Jährlich</th>
               <th class="text-right">Monatsanteil</th>
-              <th class="text-right">Aktiv</th>
               <th class="text-right">Aktion</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="budgetItem in group.items" :key="budgetItem.id">
               <td>
-                <div class="d-flex align-center ga-2">
-                  <span>{{ budgetItem.name }}</span>
-                  <v-chip v-if="budgetItem.active === false" size="x-small" color="warning">
-                    Inaktiv
-                  </v-chip>
-                </div>
+                <span>{{ budgetItem.name }}</span>
               </td>
               <td class="text-right">{{ frequencyAmount(budgetItem, "MONTHLY") }}</td>
               <td class="text-right">{{ frequencyAmount(budgetItem, "ONE_TIME") }}</td>
@@ -62,14 +56,6 @@ SPDX-License-Identifier: GPL-3.0-only
               <td class="text-right">{{ frequencyAmount(budgetItem, "HALF_YEARLY") }}</td>
               <td class="text-right">{{ frequencyAmount(budgetItem, "YEARLY") }}</td>
               <td class="text-right">{{ formatCurrency(budgetItem.monthlyAmount) }}</td>
-              <td class="text-right">
-                <v-checkbox
-                  :model-value="budgetItem.active !== false"
-                  density="compact"
-                  hide-details
-                  @update:model-value="(value) => toggleActive(budgetItem, value)"
-                />
-              </td>
               <td class="text-right">
                 <v-menu>
                   <template #activator="{ props }">
@@ -82,6 +68,30 @@ SPDX-License-Identifier: GPL-3.0-only
                       <v-list-item-title class="d-flex align-center ga-2">
                         <v-icon icon="mdi-pencil" size="small" />
                         Bearbeiten
+                      </v-list-item-title>
+                    </v-list-item>
+                    <v-list-item
+                      v-if="canSuspend && !budgetItem.suspendedForMonth"
+                      @click="openSuspendDialog(budgetItem)"
+                    >
+                      <v-list-item-title class="d-flex align-center ga-2">
+                        <v-icon icon="mdi-pause-circle-outline" size="small" />
+                        Aussetzen
+                      </v-list-item-title>
+                    </v-list-item>
+                    <v-list-item
+                      v-if="budgetItem.suspendedForMonth"
+                      @click="openResumeDialog(budgetItem)"
+                    >
+                      <v-list-item-title class="d-flex align-center ga-2">
+                        <v-icon icon="mdi-play-circle-outline" size="small" />
+                        Fortsetzen
+                      </v-list-item-title>
+                    </v-list-item>
+                    <v-list-item @click="openHistoryDialog(budgetItem)">
+                      <v-list-item-title class="d-flex align-center ga-2">
+                        <v-icon icon="mdi-chart-timeline-variant" size="small" />
+                        Historie
                       </v-list-item-title>
                     </v-list-item>
                     <v-list-item @click="remove(budgetItem.id)">
@@ -102,7 +112,6 @@ SPDX-License-Identifier: GPL-3.0-only
               <td></td>
               <td></td>
               <td class="text-right font-weight-bold">{{ formatCurrency(group.total) }}</td>
-              <td></td>
               <td></td>
             </tr>
           </tbody>
@@ -128,6 +137,30 @@ SPDX-License-Identifier: GPL-3.0-only
                     <v-list-item-title class="d-flex align-center ga-2">
                       <v-icon icon="mdi-pencil" size="small" />
                       Bearbeiten
+                    </v-list-item-title>
+                  </v-list-item>
+                  <v-list-item
+                    v-if="canSuspend && !budgetItem.suspendedForMonth"
+                    @click="openSuspendDialog(budgetItem)"
+                  >
+                    <v-list-item-title class="d-flex align-center ga-2">
+                      <v-icon icon="mdi-pause-circle-outline" size="small" />
+                      Aussetzen
+                    </v-list-item-title>
+                  </v-list-item>
+                  <v-list-item
+                    v-if="budgetItem.suspendedForMonth"
+                    @click="openResumeDialog(budgetItem)"
+                  >
+                    <v-list-item-title class="d-flex align-center ga-2">
+                      <v-icon icon="mdi-play-circle-outline" size="small" />
+                      Fortsetzen
+                    </v-list-item-title>
+                  </v-list-item>
+                  <v-list-item @click="openHistoryDialog(budgetItem)">
+                    <v-list-item-title class="d-flex align-center ga-2">
+                      <v-icon icon="mdi-chart-timeline-variant" size="small" />
+                      Historie
                     </v-list-item-title>
                   </v-list-item>
                   <v-list-item @click="remove(budgetItem.id)">
@@ -241,6 +274,54 @@ SPDX-License-Identifier: GPL-3.0-only
           <v-btn :loading="saving" color="primary" @click="submit">
             {{ buttonLabel }}
           </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+    <v-dialog v-model="suspendDialogOpen" max-width="520">
+      <v-card>
+        <v-card-title>Budget-Posten aussetzen</v-card-title>
+        <v-card-text>
+          <div class="d-flex flex-column ga-2">
+            <div class="text-caption">Aussetzen ab</div>
+            <MonthYearPicker
+              :model-value="suspendStartMonth"
+              :year-range="20"
+              @update:modelValue="(value) => (suspendStartMonth = value)"
+            />
+            <div class="text-caption">Aussetzen bis (optional)</div>
+            <MonthYearPicker
+              :model-value="suspendEndMonth"
+              :year-range="20"
+              :allow-empty="true"
+              :clearable="true"
+              @update:modelValue="(value) => (suspendEndMonth = value)"
+            />
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="suspendDialogOpen = false">Abbrechen</v-btn>
+          <v-btn color="primary" @click="submitSuspend">Aussetzen</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+    <v-dialog v-model="resumeDialogOpen" max-width="520">
+      <v-card>
+        <v-card-title>Budget-Posten fortsetzen</v-card-title>
+        <v-card-text>
+          <div class="d-flex flex-column ga-2">
+            <div class="text-caption">Fortsetzen ab</div>
+            <MonthYearPicker
+              :model-value="resumeStartMonth"
+              :year-range="20"
+              @update:modelValue="(value) => (resumeStartMonth = value)"
+            />
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="resumeDialogOpen = false">Abbrechen</v-btn>
+          <v-btn color="primary" @click="submitResume">Fortsetzen</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -388,6 +469,63 @@ SPDX-License-Identifier: GPL-3.0-only
         </v-card-actions>
       </v-card>
     </v-dialog>
+    <v-dialog v-model="historyDialogOpen" max-width="860">
+      <v-card>
+        <v-card-title>Historie: {{ historyItemName }}</v-card-title>
+        <v-card-text>
+          <div v-if="historyLoading" class="py-6 text-center">Historie wird geladen…</div>
+          <div v-else>
+            <div v-if="historyItems.length === 0" class="text-body-2">
+              Keine Historie gefunden.
+            </div>
+            <div v-else class="d-flex flex-column ga-4">
+              <div style="height: 200px;">
+                <Line
+                  v-if="historyChartData"
+                  :data="historyChartData"
+                  :options="historyChartOptions"
+                  aria-label="Budget-Posten Verlauf"
+                />
+              </div>
+              <v-table density="compact">
+                <thead>
+                  <tr>
+                    <th class="text-left">Zeitraum</th>
+                    <th class="text-left">Frequenz</th>
+                    <th class="text-left">Person</th>
+                    <th class="text-right">Betrag</th>
+                    <th class="text-right">Aktion</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="item in historyTableItems" :key="item.id">
+                    <td>{{ historyRangeLabel(item) }}</td>
+                    <td>{{ frequencyLabel(item.frequency) }}</td>
+                    <td>{{ personLabel(item) }}</td>
+                    <td class="text-right">{{ formatCurrency(item.amount) }}</td>
+                    <td class="text-right">
+                      <v-btn
+                        v-if="item.isSuspension || (item.rootBudgetItemId && item.id !== item.rootBudgetItemId)"
+                        size="small"
+                        variant="text"
+                        icon
+                        @click="deleteHistoryItem(item)"
+                      >
+                        <v-icon icon="mdi-delete" size="small" />
+                      </v-btn>
+                    </td>
+                  </tr>
+                </tbody>
+              </v-table>
+            </div>
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="historyDialogOpen = false">Schliessen</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
     <v-dialog v-model="confirmOverrideOpen" max-width="420">
       <v-card>
         <v-card-title>Betrag aendern</v-card-title>
@@ -407,7 +545,19 @@ SPDX-License-Identifier: GPL-3.0-only
 
 <script setup>
 import { computed, ref } from "vue";
+import { Line } from "vue-chartjs";
+import {
+  Chart as ChartJS,
+  LineElement,
+  PointElement,
+  LinearScale,
+  CategoryScale,
+  Tooltip,
+  Legend
+} from "chart.js";
 import MonthYearPicker from "./MonthYearPicker.vue";
+
+ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Legend);
 
 const props = defineProps({
   title: { type: String, required: true },
@@ -425,6 +575,10 @@ const props = defineProps({
   onUpdateBudgetItem: { type: Function, required: true },
   onDeleteBudgetItem: { type: Function, required: true },
   onOverrideBudgetItemForMonth: { type: Function, required: true },
+  onSuspendBudgetItem: { type: Function, required: true },
+  onResumeBudgetItem: { type: Function, required: true },
+  onFetchBudgetItemHistory: { type: Function, required: true },
+  onDeleteBudgetItemSuspension: { type: Function, required: true },
   onCreateCategoryCorrection: { type: Function, required: true },
   onCreateCategory: { type: Function, default: null },
   fixedPersonId: { type: [Number, null], default: undefined },
@@ -451,15 +605,26 @@ const editingFrequency = ref("MONTHLY");
 const editingOneTimeMonth = ref("");
 const editingStartMonth = ref("");
 const editingEndMonth = ref("");
-const editingActive = ref(true);
 const createDialogOpen = ref(false);
 const editDialogOpen = ref(false);
 const confirmOverrideOpen = ref(false);
+const suspendDialogOpen = ref(false);
+const suspendItemId = ref(null);
+const suspendStartMonth = ref(props.summaryMonth);
+const suspendEndMonth = ref("");
+const resumeDialogOpen = ref(false);
+const resumeItemId = ref(null);
+const resumeStartMonth = ref(props.summaryMonth);
 const originalAmount = ref("");
 const pendingSaveId = ref(null);
 const correctionCategoryId = ref(null);
 const correctionAmount = ref("");
 const correctionDialogOpen = ref(false);
+const historyDialogOpen = ref(false);
+const historyItems = ref([]);
+const historyLoading = ref(false);
+const historyItemName = ref("");
+const historyRootId = ref(null);
 
 const buttonLabel = computed(() =>
   props.type === "INCOME" ? "Einnahme hinzufügen" : "Ausgabe hinzufügen"
@@ -471,6 +636,7 @@ const showFrequencyTable = computed(() => props.type === "EXPENSE");
 const showStartEndFields = computed(() => frequency.value !== "ONE_TIME");
 const showEditingStartEndFields = computed(() => editingFrequency.value !== "ONE_TIME");
 const showCorrectionForm = computed(() => props.type === "EXPENSE");
+const canSuspend = computed(() => props.type === "EXPENSE");
 
 const sortedCategories = computed(() =>
   props.categories.slice().sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0))
@@ -483,6 +649,11 @@ const frequencyOptions = [
   { title: "Halbjährlich", value: "HALF_YEARLY" },
   { title: "Jährlich", value: "YEARLY" }
 ];
+
+const frequencyLabel = (value) => {
+  const match = frequencyOptions.find((option) => option.value === value);
+  return match?.title || value;
+};
 
 const findCategoryIdByLabel = (label) => {
   const trimmed = label.trim();
@@ -533,12 +704,7 @@ const groupedBudgetItems = computed(() => {
         ? rankById.get(group.categoryId) ?? Number.MAX_SAFE_INTEGER
         : Number.MAX_SAFE_INTEGER,
       items: group.items.slice().sort((a, b) => a.name.localeCompare(b.name)),
-      total: group.items.reduce((sum, item) => {
-        if (item.active === false) {
-          return sum;
-        }
-        return sum + Number(item.monthlyAmount || 0);
-      }, 0)
+      total: group.items.reduce((sum, item) => sum + Number(item.monthlyAmount || 0), 0)
     }))
     .sort((a, b) => {
       if (a.rank !== b.rank) {
@@ -625,6 +791,149 @@ const dateToMonth = (value) => {
   return String(value).slice(0, 7);
 };
 
+const historyRangeLabel = (budgetItem) => {
+  const start = dateToMonth(budgetItem.startDate) || "—";
+  const end = dateToMonth(budgetItem.endDate) || "offen";
+  return `${start} – ${end}`;
+};
+
+const historyTableItems = computed(() =>
+  historyItems.value
+    .slice()
+    .sort((a, b) => {
+      const aDate = a.startDate ? new Date(a.startDate) : new Date(0);
+      const bDate = b.startDate ? new Date(b.startDate) : new Date(0);
+      const diff = aDate - bDate;
+      if (diff !== 0) {
+        return diff;
+      }
+      if (a.isSuspension !== b.isSuspension) {
+        return a.isSuspension ? 1 : -1;
+      }
+      return (a.id ?? 0) - (b.id ?? 0);
+    })
+);
+
+const historySeries = computed(() => {
+  const items = historyTableItems.value;
+  if (items.length === 0) {
+    return { labels: [], values: [], currentIndex: -1 };
+  }
+  const toDate = (value) => (value ? new Date(`${value}T00:00:00`) : null);
+  const startDates = items.map((item) => toDate(item.startDate)).filter(Boolean);
+  const endDates = items.map((item) => toDate(item.endDate)).filter(Boolean);
+  const minDate = new Date(Math.min(...startDates.map((date) => date.getTime())));
+  const currentMonthValue = props.summaryMonth || dateToMonth(items[items.length - 1].startDate);
+  const currentMonthDate = currentMonthValue ? new Date(`${currentMonthValue}-01T00:00:00`) : null;
+  const maxCandidate = [
+    ...endDates,
+    currentMonthDate,
+    toDate(items[items.length - 1].startDate)
+  ].filter(Boolean);
+  const maxDate = new Date(Math.max(...maxCandidate.map((date) => date.getTime())));
+
+  const months = [];
+  const cursor = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+  const limit = new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
+  while (cursor <= limit) {
+    months.push(new Date(cursor.getTime()));
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+
+  const resolveItemForMonth = (monthDate) => {
+    const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+    const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0, 23, 59, 59);
+    let match = null;
+    items.forEach((item) => {
+      const itemStart = toDate(item.startDate);
+      const itemEnd = item.endDate ? new Date(`${item.endDate}T23:59:59`) : null;
+      if (itemStart && itemStart > monthEnd) {
+        return;
+      }
+      if (itemEnd && itemEnd < monthStart) {
+        return;
+      }
+      match = item;
+    });
+    return match;
+  };
+
+  let lastKnown = null;
+  const labels = [];
+  const values = [];
+  months.forEach((monthDate) => {
+    const match = resolveItemForMonth(monthDate) || lastKnown;
+    if (!match) {
+      return;
+    }
+    lastKnown = match;
+    const label = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, "0")}`;
+    labels.push(label);
+    values.push(Number(match.amount ?? 0));
+  });
+
+  const currentIndex =
+    currentMonthValue && labels.includes(currentMonthValue)
+      ? labels.indexOf(currentMonthValue)
+      : labels.length - 1;
+  return { labels, values, currentIndex };
+});
+
+const historyChartData = computed(() => {
+  if (historySeries.value.labels.length === 0) {
+    return null;
+  }
+  const baseColor = "#37474f";
+  const highlightColor = "#1e88e5";
+  const pointRadius = historySeries.value.values.map((_, index) =>
+    index === historySeries.value.currentIndex ? 5 : 3
+  );
+  const pointBackgroundColor = historySeries.value.values.map((_, index) =>
+    index === historySeries.value.currentIndex ? highlightColor : baseColor
+  );
+  return {
+    labels: historySeries.value.labels,
+    datasets: [
+      {
+        label: "Betrag",
+        data: historySeries.value.values,
+        borderColor: baseColor,
+        backgroundColor: baseColor,
+        pointRadius,
+        pointBackgroundColor,
+        pointHoverRadius: 6,
+        tension: 0
+      }
+    ]
+  };
+});
+
+const historyChartOptions = computed(() => ({
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      callbacks: {
+        label: (context) => props.formatCurrency(context.parsed.y)
+      }
+    }
+  },
+  scales: {
+    y: {
+      ticks: {
+        callback: (value) => props.formatCurrency(value)
+      }
+    },
+    x: {
+      ticks: {
+        autoSkip: true,
+        maxRotation: 0
+      }
+    }
+  }
+}));
+
 const updateOneTimeMonth = (value) => {
   oneTimeMonth.value = value;
 };
@@ -653,6 +962,34 @@ const openCreateDialog = () => {
   createDialogOpen.value = true;
 };
 
+const openSuspendDialog = (budgetItem) => {
+  suspendItemId.value = budgetItem.id;
+  suspendStartMonth.value = props.summaryMonth;
+  suspendEndMonth.value = "";
+  suspendDialogOpen.value = true;
+};
+
+const openResumeDialog = (budgetItem) => {
+  resumeItemId.value = budgetItem.id;
+  resumeStartMonth.value = props.summaryMonth;
+  resumeDialogOpen.value = true;
+};
+
+const fetchHistory = async (sourceId) => {
+  historyLoading.value = true;
+  const items = await props.onFetchBudgetItemHistory(sourceId);
+  historyItems.value = Array.isArray(items) ? items : [];
+  const rootId = historyItems.value[0]?.rootBudgetItemId ?? historyItems.value[0]?.id ?? null;
+  historyRootId.value = rootId;
+  historyLoading.value = false;
+};
+
+const openHistoryDialog = async (budgetItem) => {
+  historyDialogOpen.value = true;
+  historyItemName.value = budgetItem.name;
+  await fetchHistory(budgetItem.id);
+};
+
 const submit = async () => {
   const derivedName = showNameField.value ? name.value : categoryNameFor(categoryId.value);
   const effectivePersonId = props.showPersonSelector ? personId.value : props.fixedPersonId ?? null;
@@ -670,8 +1007,7 @@ const submit = async () => {
     type: props.type,
     frequency: showFrequencyPicker.value ? frequency.value : null,
     startDate,
-    endDate,
-    active: true
+    endDate
   });
   if (success) {
     name.value = "";
@@ -704,6 +1040,35 @@ const submitCategoryCorrection = async () => {
   }
 };
 
+const submitSuspend = async () => {
+  if (!suspendItemId.value) {
+    return;
+  }
+  const success = await props.onSuspendBudgetItem(
+    suspendItemId.value,
+    suspendStartMonth.value,
+    suspendEndMonth.value || null
+  );
+  if (success) {
+    suspendDialogOpen.value = false;
+    suspendItemId.value = null;
+    suspendStartMonth.value = props.summaryMonth;
+    suspendEndMonth.value = "";
+  }
+};
+
+const submitResume = async () => {
+  if (!resumeItemId.value) {
+    return;
+  }
+  const success = await props.onResumeBudgetItem(resumeItemId.value, resumeStartMonth.value);
+  if (success) {
+    resumeDialogOpen.value = false;
+    resumeItemId.value = null;
+    resumeStartMonth.value = props.summaryMonth;
+  }
+};
+
 const startEdit = (budgetItem) => {
   editingId.value = budgetItem.id;
   editingName.value = budgetItem.name;
@@ -716,7 +1081,6 @@ const startEdit = (budgetItem) => {
   editingOneTimeMonth.value = dateToMonth(budgetItem.startDate);
   editingStartMonth.value = dateToMonth(budgetItem.startDate);
   editingEndMonth.value = dateToMonth(budgetItem.endDate);
-  editingActive.value = budgetItem.active !== false;
   editDialogOpen.value = true;
 };
 
@@ -731,7 +1095,6 @@ const cancelEdit = () => {
   editingOneTimeMonth.value = "";
   editingStartMonth.value = "";
   editingEndMonth.value = "";
-  editingActive.value = true;
   editDialogOpen.value = false;
   confirmOverrideOpen.value = false;
   pendingSaveId.value = null;
@@ -784,7 +1147,6 @@ const saveEditWithMode = async (id, overrideForMonth) => {
     effectivePersonId,
     props.type,
     showFrequencyPicker.value ? editingFrequency.value : null,
-    editingActive.value,
     startDate,
     endDate
   );
@@ -808,22 +1170,6 @@ const cancelOverrideChoice = () => {
   pendingSaveId.value = null;
 };
 
-const toggleActive = async (budgetItem, nextValue) => {
-  const success = await props.onUpdateBudgetItem(
-    budgetItem.id,
-    budgetItem.name,
-    budgetItem.amount,
-    budgetItem.category?.id ?? null,
-    budgetItem.person?.id ?? null,
-    props.type,
-    budgetItem.frequency,
-    nextValue,
-    budgetItem.frequency === "ONE_TIME" ? budgetItem.startDate : budgetItem.startDate,
-    budgetItem.frequency === "ONE_TIME" ? null : budgetItem.endDate
-  );
-  return success;
-};
-
 const remove = async (id) => {
   if (!window.confirm("Transaktion wirklich loeschen?")) {
     return;
@@ -833,5 +1179,22 @@ const remove = async (id) => {
 
 const personLabel = (budgetItem) => {
   return budgetItem.person?.name || "Gemeinsam";
+};
+
+const deleteHistoryItem = async (budgetItem) => {
+  if (!budgetItem?.id) {
+    return;
+  }
+  if (!window.confirm("Budget-Posten wirklich loeschen?")) {
+    return;
+  }
+  if (budgetItem.isSuspension) {
+    await props.onDeleteBudgetItemSuspension(budgetItem.suspensionId);
+  } else {
+    await props.onDeleteBudgetItem(budgetItem.id);
+  }
+  if (historyRootId.value) {
+    await fetchHistory(historyRootId.value);
+  }
 };
 </script>

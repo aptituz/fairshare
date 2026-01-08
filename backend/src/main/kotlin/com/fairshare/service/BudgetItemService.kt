@@ -6,32 +6,126 @@
 package com.fairshare.service
 
 import com.fairshare.dto.BudgetItemOverrideRequest
+import com.fairshare.dto.BudgetItemHistoryEntryResponse
 import com.fairshare.dto.BudgetItemResponse
 import com.fairshare.dto.CategoryCorrectionRequest
 import com.fairshare.dto.CreateBudgetItemRequest
+import com.fairshare.dto.ResumeBudgetItemRequest
+import com.fairshare.dto.SuspendBudgetItemRequest
 import com.fairshare.dto.UpdateBudgetItemRequest
 import com.fairshare.exception.BadRequestException
 import com.fairshare.exception.NotFoundException
 import com.fairshare.mapper.toResponse
 import com.fairshare.model.BudgetItem
+import com.fairshare.model.BudgetItemSuspension
 import com.fairshare.model.BudgetItemType
 import com.fairshare.model.Frequency
 import com.fairshare.repo.BudgetItemRepository
+import com.fairshare.repo.BudgetItemSuspensionRepository
 import com.fairshare.repo.CategoryRepository
 import com.fairshare.repo.PersonRepository
 import org.springframework.stereotype.Service
+import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.YearMonth
 
 @Service
 class BudgetItemService(
     private val budgetItemRepository: BudgetItemRepository,
+    private val budgetItemSuspensionRepository: BudgetItemSuspensionRepository,
     private val categoryRepository: CategoryRepository,
     private val personRepository: PersonRepository,
 ) {
-    fun list(type: BudgetItemType?): List<BudgetItemResponse> =
-        (type?.let { budgetItemRepository.findByType(it) } ?: budgetItemRepository.findAll())
-            .map { it.toResponse() }
+    fun list(
+        type: BudgetItemType?,
+        month: String?,
+    ): List<BudgetItemResponse> {
+        if (month != null) {
+            val parsedMonth = parseYearMonth(month)
+            val monthStart = parsedMonth.atDay(1)
+            val monthEnd = parsedMonth.atEndOfMonth()
+            val items =
+                type?.let { budgetItemRepository.findEffectiveForMonth(it, monthStart, monthEnd) }
+                    ?: budgetItemRepository.findEffectiveForMonth(monthStart, monthEnd)
+            return applySuspensionsToResponses(items, monthStart, monthEnd)
+        }
+        val items = type?.let { budgetItemRepository.findByType(it) } ?: budgetItemRepository.findAll()
+        return items.map { it.toResponse() }
+    }
+
+    fun historyWithSuspensions(id: Long): List<BudgetItemHistoryEntryResponse> {
+        val budgetItem =
+            budgetItemRepository.findById(id).orElseThrow {
+                NotFoundException("Budget item $id not found")
+            }
+        val rootId =
+            budgetItem.rootBudgetItem?.id
+                ?: budgetItem.id
+                ?: throw BadRequestException("Budget item $id is missing an id")
+        val items = budgetItemRepository.findHistoryByRootId(rootId)
+        val itemIds = items.mapNotNull { it.id }
+        val suspensions =
+            if (itemIds.isEmpty()) {
+                emptyList()
+            } else {
+                budgetItemSuspensionRepository.findByBudgetItemIdIn(itemIds)
+            }
+        val itemEntries =
+            items.map { item ->
+                BudgetItemHistoryEntryResponse(
+                    id = item.id,
+                    name = item.name,
+                    amount = item.amount,
+                    type = item.type,
+                    frequency = item.frequency,
+                    planned = item.planned,
+                    categoryCorrection = item.categoryCorrection,
+                    startDate = item.startDate,
+                    endDate = item.endDate,
+                    previousBudgetItemId = item.previousBudgetItem?.id,
+                    rootBudgetItemId = item.rootBudgetItem?.id,
+                    category = item.category?.toResponse(),
+                    person = item.person?.toResponse(),
+                    isSuspension = false,
+                    suspensionId = null,
+                )
+            }
+        val suspensionEntries =
+            suspensions.map { suspension ->
+                val item = suspension.budgetItem
+                BudgetItemHistoryEntryResponse(
+                    id = item.id,
+                    name = item.name,
+                    amount = java.math.BigDecimal.ZERO,
+                    type = item.type,
+                    frequency = Frequency.MONTHLY,
+                    planned = item.planned,
+                    categoryCorrection = item.categoryCorrection,
+                    startDate = suspension.startDate,
+                    endDate = suspension.endDate,
+                    previousBudgetItemId = item.previousBudgetItem?.id,
+                    rootBudgetItemId = item.rootBudgetItem?.id,
+                    category = item.category?.toResponse(),
+                    person = item.person?.toResponse(),
+                    isSuspension = true,
+                    suspensionId = suspension.id,
+                )
+            }
+        return (itemEntries + suspensionEntries)
+            .sortedWith(
+                compareBy<BudgetItemHistoryEntryResponse> { it.startDate }
+                    .thenBy { if (it.isSuspension) 1 else 0 }
+                    .thenBy { it.id ?: 0L },
+            )
+    }
+
+    fun deleteSuspension(id: Long) {
+        val suspension =
+            budgetItemSuspensionRepository.findById(id).orElseThrow {
+                NotFoundException("Budget item suspension $id not found")
+            }
+        budgetItemSuspensionRepository.delete(suspension)
+    }
 
     fun create(request: CreateBudgetItemRequest): BudgetItemResponse {
         val category =
@@ -50,15 +144,15 @@ class BudgetItemService(
         val frequency = request.frequency ?: Frequency.MONTHLY
         val startDate = request.startDate ?: LocalDate.now()
         val endDate = resolveEndDate(frequency, startDate, request.endDate)
+        val planned = request.planned ?: true
         val saved =
-            budgetItemRepository.save(
+            saveWithSelfRoot(
                 BudgetItem(
                     name = request.name.trim(),
                     amount = request.amount,
                     type = request.type,
                     frequency = frequency,
-                    active = request.active ?: true,
-                    planned = request.planned ?: true,
+                    planned = planned,
                     categoryCorrection = false,
                     startDate = startDate,
                     endDate = endDate,
@@ -100,9 +194,6 @@ class BudgetItemService(
         budgetItem.person = person
         if (request.frequency != null) {
             budgetItem.frequency = request.frequency
-        }
-        if (request.active != null) {
-            budgetItem.active = request.active
         }
         if (request.planned != null) {
             budgetItem.planned = request.planned
@@ -179,11 +270,13 @@ class BudgetItemService(
                     amount = originalAmount,
                     type = budgetItem.type,
                     frequency = budgetItem.frequency,
-                    active = budgetItem.active,
+                    planned = budgetItem.planned,
                     startDate = monthEnd.plusDays(1),
                     endDate = originalEnd,
                     category = budgetItem.category,
                     person = budgetItem.person,
+                    previousBudgetItem = budgetItem,
+                    rootBudgetItem = resolveRootBudgetItem(budgetItem),
                 ),
             )
         }
@@ -195,15 +288,91 @@ class BudgetItemService(
                     amount = amount,
                     type = budgetItem.type,
                     frequency = Frequency.ONE_TIME,
-                    active = budgetItem.active,
+                    planned = budgetItem.planned,
                     startDate = monthStart,
                     endDate = monthEnd,
                     category = budgetItem.category,
                     person = budgetItem.person,
+                    previousBudgetItem = budgetItem,
+                    rootBudgetItem = resolveRootBudgetItem(budgetItem),
                 ),
             )
 
         return overrideItem.toResponse()
+    }
+
+    fun suspendExpense(
+        id: Long,
+        request: SuspendBudgetItemRequest,
+    ): BudgetItemResponse {
+        val budgetItem =
+            budgetItemRepository.findById(id).orElseThrow {
+                NotFoundException("Budget item $id not found")
+            }
+        if (budgetItem.type != BudgetItemType.EXPENSE) {
+            throw BadRequestException("Only expense items can be suspended")
+        }
+        val startMonth = parseYearMonth(request.startMonth)
+        val startDate = startMonth.atDay(1)
+        val endDate = request.endMonth?.let { parseYearMonth(it).atEndOfMonth() }
+        if (endDate != null && endDate.isBefore(startDate)) {
+            throw BadRequestException("End month must be after start month")
+        }
+        if (startDate.isBefore(budgetItem.startDate)) {
+            throw BadRequestException("Suspend start must be within the item range")
+        }
+        val originalEnd = budgetItem.endDate
+        if (originalEnd != null && startDate.isAfter(originalEnd)) {
+            throw BadRequestException("Suspend start must be within the item range")
+        }
+        if (endDate != null && originalEnd != null && endDate.isAfter(originalEnd)) {
+            throw BadRequestException("Suspend end must be within the item range")
+        }
+
+        val effectiveEnd = endDate ?: LocalDate.of(9999, 12, 31)
+        if (budgetItemSuspensionRepository.existsOverlapping(budgetItem.id!!, startDate, effectiveEnd)) {
+            throw BadRequestException("Suspend period overlaps with an existing suspension")
+        }
+        budgetItemSuspensionRepository.save(
+            BudgetItemSuspension(
+                budgetItem = budgetItem,
+                startDate = startDate,
+                endDate = endDate,
+            ),
+        )
+
+        return budgetItem.toResponse()
+    }
+
+    fun resumeSuspendedExpense(
+        id: Long,
+        request: ResumeBudgetItemRequest,
+    ): BudgetItemResponse {
+        val budgetItem =
+            budgetItemRepository.findById(id).orElseThrow {
+                NotFoundException("Budget item $id not found")
+            }
+        if (budgetItem.type != BudgetItemType.EXPENSE) {
+            throw BadRequestException("Only expense items can be resumed")
+        }
+        val resumeMonth = parseYearMonth(request.startMonth)
+        val resumeStart = resumeMonth.atDay(1)
+        val resumeEnd = resumeMonth.atEndOfMonth()
+        val suspensions =
+            budgetItemSuspensionRepository.findActiveForItemAndMonth(
+                budgetItem.id!!,
+                resumeStart,
+                resumeEnd,
+            )
+        val suspension = suspensions.firstOrNull()
+            ?: throw BadRequestException("No suspension found for the selected month")
+        if (resumeStart.isEqual(suspension.startDate)) {
+            budgetItemSuspensionRepository.delete(suspension)
+            return budgetItem.toResponse()
+        }
+        suspension.endDate = resumeStart.minusDays(1)
+        budgetItemSuspensionRepository.save(suspension)
+        return budgetItem.toResponse()
     }
 
     fun delete(id: Long) {
@@ -268,13 +437,12 @@ class BudgetItemService(
         }
 
         val saved =
-            budgetItemRepository.save(
+            saveWithSelfRoot(
                 BudgetItem(
                     name = "Korrektur ${category.name}",
                     amount = correctionAmount,
                     type = BudgetItemType.EXPENSE,
                     frequency = Frequency.ONE_TIME,
-                    active = true,
                     planned = false,
                     categoryCorrection = true,
                     startDate = monthStart,
@@ -284,6 +452,43 @@ class BudgetItemService(
                 ),
             )
         return saved.toResponse()
+    }
+
+    private fun resolveRootBudgetItem(budgetItem: BudgetItem): BudgetItem = budgetItem.rootBudgetItem ?: budgetItem
+
+    private fun applySuspensionsToResponses(
+        items: List<BudgetItem>,
+        monthStart: LocalDate,
+        monthEnd: LocalDate,
+    ): List<BudgetItemResponse> {
+        val itemIds = items.mapNotNull { it.id }
+        if (itemIds.isEmpty()) {
+            return items.map { it.toResponse() }
+        }
+        val suspensions =
+            budgetItemSuspensionRepository.findActiveForItemsAndMonth(itemIds, monthStart, monthEnd)
+        val suspendedIds = suspensions.mapNotNull { it.budgetItem.id }.toSet()
+        return items.map { item ->
+            val response = item.toResponse()
+            if (item.id != null && suspendedIds.contains(item.id)) {
+                response.copy(
+                    amount = BigDecimal.ZERO,
+                    monthlyAmount = BigDecimal.ZERO,
+                    suspendedForMonth = true,
+                )
+            } else {
+                response
+            }
+        }
+    }
+
+    private fun saveWithSelfRoot(budgetItem: BudgetItem): BudgetItem {
+        val saved = budgetItemRepository.save(budgetItem)
+        if (saved.rootBudgetItem == null) {
+            saved.rootBudgetItem = saved
+            return budgetItemRepository.save(saved)
+        }
+        return saved
     }
 }
 
@@ -299,4 +504,11 @@ private fun resolveEndDate(
         requestedEndDate ?: YearMonth.from(startDate).atEndOfMonth()
     } else {
         requestedEndDate
+    }
+
+private fun parseYearMonth(value: String): YearMonth =
+    try {
+        YearMonth.parse(value)
+    } catch (ex: Exception) {
+        throw BadRequestException("Invalid month format. Use YYYY-MM.")
     }

@@ -46,6 +46,10 @@ SPDX-License-Identifier: GPL-3.0-only
       :updateBudgetItem="updateBudgetItem"
       :deleteBudgetItem="deleteBudgetItem"
       :overrideBudgetItemForMonth="overrideBudgetItemForMonth"
+      :suspendBudgetItem="suspendBudgetItem"
+      :resumeBudgetItem="resumeBudgetItem"
+      :fetchBudgetItemHistory="fetchBudgetItemHistory"
+      :deleteBudgetItemSuspension="deleteBudgetItemSuspension"
       :createCategoryCorrection="createCategoryCorrection"
       :createCategory="createCategory"
     />
@@ -99,6 +103,10 @@ const {
   updateBudgetItem,
   deleteBudgetItem,
   overrideBudgetItemForMonth,
+  suspendBudgetItem,
+  resumeBudgetItem,
+  fetchBudgetItemHistory,
+  deleteBudgetItemSuspension,
   createCategoryCorrection,
   categoryPathLabel,
   categoryRank,

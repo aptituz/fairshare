@@ -15,21 +15,16 @@ import java.time.LocalDate
 interface BudgetItemRepository : JpaRepository<BudgetItem, Long> {
     fun findByType(type: BudgetItemType): List<BudgetItem>
 
-    fun findByTypeAndActiveTrue(type: BudgetItemType): List<BudgetItem>
-
-    fun findByActiveTrue(): List<BudgetItem>
-
     @Query(
         """
         select b
         from BudgetItem b
-        where b.active = true
-          and b.type = :type
+        where b.type = :type
           and b.startDate <= :monthEnd
           and (b.endDate is null or b.endDate >= :monthStart)
         """,
     )
-    fun findActiveForMonth(
+    fun findForMonth(
         @Param("type") type: BudgetItemType,
         @Param("monthStart") monthStart: LocalDate,
         @Param("monthEnd") monthEnd: LocalDate,
@@ -39,8 +34,67 @@ interface BudgetItemRepository : JpaRepository<BudgetItem, Long> {
         """
         select b
         from BudgetItem b
-        where b.active = true
-          and b.planned = true
+        where b.type = :type
+          and b.startDate <= :monthEnd
+          and (b.endDate is null or b.endDate >= :monthStart)
+          and b.startDate = (
+            select max(b2.startDate)
+            from BudgetItem b2
+            where b2.rootBudgetItem = b.rootBudgetItem
+              and b2.type = :type
+              and b2.startDate <= :monthEnd
+              and (b2.endDate is null or b2.endDate >= :monthStart)
+          )
+          and b.id = (
+            select max(b3.id)
+            from BudgetItem b3
+            where b3.rootBudgetItem = b.rootBudgetItem
+              and b3.type = :type
+              and b3.startDate = b.startDate
+              and b3.startDate <= :monthEnd
+              and (b3.endDate is null or b3.endDate >= :monthStart)
+          )
+        """,
+    )
+    fun findEffectiveForMonth(
+        @Param("type") type: BudgetItemType,
+        @Param("monthStart") monthStart: LocalDate,
+        @Param("monthEnd") monthEnd: LocalDate,
+    ): List<BudgetItem>
+
+    @Query(
+        """
+        select b
+        from BudgetItem b
+        where b.startDate <= :monthEnd
+          and (b.endDate is null or b.endDate >= :monthStart)
+          and b.startDate = (
+            select max(b2.startDate)
+            from BudgetItem b2
+            where b2.rootBudgetItem = b.rootBudgetItem
+              and b2.startDate <= :monthEnd
+              and (b2.endDate is null or b2.endDate >= :monthStart)
+          )
+          and b.id = (
+            select max(b3.id)
+            from BudgetItem b3
+            where b3.rootBudgetItem = b.rootBudgetItem
+              and b3.startDate = b.startDate
+              and b3.startDate <= :monthEnd
+              and (b3.endDate is null or b3.endDate >= :monthStart)
+          )
+        """,
+    )
+    fun findEffectiveForMonth(
+        @Param("monthStart") monthStart: LocalDate,
+        @Param("monthEnd") monthEnd: LocalDate,
+    ): List<BudgetItem>
+
+    @Query(
+        """
+        select b
+        from BudgetItem b
+        where b.planned = true
           and b.type = :type
           and b.category.id = :categoryId
           and b.startDate <= :monthEnd
@@ -60,8 +114,7 @@ interface BudgetItemRepository : JpaRepository<BudgetItem, Long> {
         """
         select b
         from BudgetItem b
-        where b.active = true
-          and b.planned = false
+        where b.planned = false
           and b.categoryCorrection = true
           and b.type = :type
           and b.category.id = :categoryId
@@ -81,4 +134,16 @@ interface BudgetItemRepository : JpaRepository<BudgetItem, Long> {
     fun existsByCategoryId(categoryId: Long): Boolean
 
     fun existsByPersonId(personId: Long): Boolean
+
+    @Query(
+        """
+        select b
+        from BudgetItem b
+        where b.rootBudgetItem.id = :rootId
+        order by b.startDate, b.id
+        """,
+    )
+    fun findHistoryByRootId(
+        @Param("rootId") rootId: Long,
+    ): List<BudgetItem>
 }

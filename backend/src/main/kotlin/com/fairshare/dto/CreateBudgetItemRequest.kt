@@ -17,7 +17,6 @@ data class CreateBudgetItemRequest(
     val categoryId: Long?,
     val personId: Long? = null,
     val frequency: Frequency? = null,
-    val active: Boolean? = null,
     val planned: Boolean? = null,
     val startDate: LocalDate? = null,
     val endDate: LocalDate? = null,

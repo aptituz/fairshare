@@ -68,7 +68,8 @@ export const useBudgetData = () => {
   };
 
   const fetchBudgetItems = async () => {
-    budgetItems.value = await request("/api/budget-items");
+    const query = summaryMonth.value ? `?month=${summaryMonth.value}` : "";
+    budgetItems.value = await request(`/api/budget-items${query}`);
   };
 
   const fetchSummary = async () => {
@@ -238,7 +239,6 @@ export const useBudgetData = () => {
     personId,
     type,
     frequency,
-    active,
     startDate,
     endDate,
     planned
@@ -273,7 +273,6 @@ export const useBudgetData = () => {
           frequency: frequency || null,
           startDate: startDate || null,
           endDate: endDate || null,
-          active: active ?? true,
           planned: planned ?? true
         })
       });
@@ -295,7 +294,6 @@ export const useBudgetData = () => {
     personId,
     type,
     frequency,
-    active,
     startDate,
     endDate,
     planned
@@ -333,7 +331,6 @@ export const useBudgetData = () => {
           categoryId: normalizedCategoryId,
           personId: normalizedPersonId,
           frequency: frequency || null,
-          active: active ?? null,
           startDate: startDate || null,
           endDate: endDate || null,
           planned: planned ?? null
@@ -368,6 +365,78 @@ export const useBudgetData = () => {
       return true;
     } catch (err) {
       error.value = err?.message || "Monatswert konnte nicht aktualisiert werden.";
+      return false;
+    }
+  };
+
+  const suspendBudgetItem = async (id, startMonth, endMonth) => {
+    if (!startMonth) {
+      error.value = "Bitte einen gueltigen Startmonat waehlen.";
+      return false;
+    }
+    error.value = "";
+    try {
+      await request(`/api/budget-items/${id}/suspend`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          startMonth,
+          endMonth: endMonth || null
+        })
+      });
+      await refreshAll();
+      return true;
+    } catch (err) {
+      error.value = err?.message || "Budget-Posten konnte nicht ausgesetzt werden.";
+      return false;
+    }
+  };
+
+  const resumeBudgetItem = async (id, startMonth) => {
+    if (!startMonth) {
+      error.value = "Bitte einen gueltigen Startmonat waehlen.";
+      return false;
+    }
+    error.value = "";
+    try {
+      await request(`/api/budget-items/${id}/resume`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ startMonth })
+      });
+      await refreshAll();
+      return true;
+    } catch (err) {
+      error.value = err?.message || "Budget-Posten konnte nicht fortgesetzt werden.";
+      return false;
+    }
+  };
+
+  const fetchBudgetItemHistory = async (id) => {
+    if (!id) {
+      error.value = "Bitte einen gueltigen Budget-Posten waehlen.";
+      return [];
+    }
+    error.value = "";
+    try {
+      return await request(`/api/budget-items/${id}/history`);
+    } catch (err) {
+      error.value = err?.message || "Historie konnte nicht geladen werden.";
+      return [];
+    }
+  };
+
+  const deleteBudgetItemSuspension = async (id) => {
+    if (!id) {
+      return false;
+    }
+    error.value = "";
+    try {
+      await request(`/api/budget-items/suspensions/${id}`, { method: "DELETE" });
+      await refreshAll();
+      return true;
+    } catch (err) {
+      error.value = err?.message || "Aussetzung konnte nicht geloescht werden.";
       return false;
     }
   };
@@ -460,6 +529,10 @@ export const useBudgetData = () => {
     updateBudgetItem,
     deleteBudgetItem,
     overrideBudgetItemForMonth,
+    suspendBudgetItem,
+    resumeBudgetItem,
+    fetchBudgetItemHistory,
+    deleteBudgetItemSuspension,
     createCategoryCorrection,
     categoryPathLabel,
     categoryRank

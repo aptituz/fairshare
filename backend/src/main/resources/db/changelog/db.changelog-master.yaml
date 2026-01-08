@@ -338,3 +338,282 @@ databaseChangeLog:
               UPDATE budget_items
               SET category_correction = FALSE
               WHERE category_correction IS NULL;
+
+  - changeSet:
+      id: 009-drop-budget-items-active
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        columnExists:
+          tableName: budget_items
+          columnName: active
+      changes:
+        - dropColumn:
+            tableName: budget_items
+            columnName: active
+
+  - changeSet:
+      id: 010-add-budget-items-previous
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        not:
+          columnExists:
+            tableName: budget_items
+            columnName: previous_budget_item_id
+      changes:
+        - addColumn:
+            tableName: budget_items
+            columns:
+              - column:
+                  name: previous_budget_item_id
+                  type: BIGINT
+                  constraints:
+                    nullable: true
+        - addForeignKeyConstraint:
+            baseTableName: budget_items
+            baseColumnNames: previous_budget_item_id
+            referencedTableName: budget_items
+            referencedColumnNames: id
+            constraintName: fk_budget_items_previous
+            onDelete: SET NULL
+
+  - changeSet:
+      id: 010b-backfill-budget-items-previous
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        columnExists:
+          tableName: budget_items
+          columnName: previous_budget_item_id
+      changes:
+        - sql:
+            splitStatements: true
+            endDelimiter: ;
+            sql: |
+              WITH ordered AS (
+                SELECT
+                  id,
+                  LAG(id) OVER (
+                    PARTITION BY name
+                    ORDER BY start_date, id
+                  ) AS prev_id
+                FROM budget_items
+              )
+              UPDATE budget_items b
+              SET previous_budget_item_id = ordered.prev_id
+              FROM ordered
+              WHERE b.id = ordered.id
+                AND ordered.prev_id IS NOT NULL;
+
+  - changeSet:
+      id: 010c-fix-budget-items-previous-by-person
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        columnExists:
+          tableName: budget_items
+          columnName: previous_budget_item_id
+      changes:
+        - sql:
+            splitStatements: true
+            endDelimiter: ;
+            sql: |
+              UPDATE budget_items
+              SET previous_budget_item_id = NULL;
+
+              WITH ordered AS (
+                SELECT
+                  id,
+                  LAG(id) OVER (
+                    PARTITION BY name, person_id, type
+                    ORDER BY start_date, id
+                  ) AS prev_id
+                FROM budget_items
+              )
+              UPDATE budget_items b
+              SET previous_budget_item_id = ordered.prev_id
+              FROM ordered
+              WHERE b.id = ordered.id
+                AND ordered.prev_id IS NOT NULL;
+
+  - changeSet:
+      id: 011-add-budget-items-root
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        not:
+          columnExists:
+            tableName: budget_items
+            columnName: root_budget_item_id
+      changes:
+        - addColumn:
+            tableName: budget_items
+            columns:
+              - column:
+                  name: root_budget_item_id
+                  type: BIGINT
+                  constraints:
+                    nullable: true
+        - addForeignKeyConstraint:
+            baseTableName: budget_items
+            baseColumnNames: root_budget_item_id
+            referencedTableName: budget_items
+            referencedColumnNames: id
+            constraintName: fk_budget_items_root
+            onDelete: SET NULL
+
+  - changeSet:
+      id: 011b-backfill-budget-items-root
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        columnExists:
+          tableName: budget_items
+          columnName: root_budget_item_id
+      changes:
+        - sql:
+            splitStatements: true
+            endDelimiter: ;
+            sql: |
+              WITH RECURSIVE roots AS (
+                SELECT id, id AS root_id
+                FROM budget_items
+                WHERE previous_budget_item_id IS NULL
+                UNION ALL
+                SELECT b.id, r.root_id
+                FROM budget_items b
+                JOIN roots r ON b.previous_budget_item_id = r.id
+              )
+              UPDATE budget_items b
+              SET root_budget_item_id = roots.root_id
+              FROM roots
+              WHERE b.id = roots.id;
+
+  - changeSet:
+      id: 011c-fix-budget-items-root-by-person
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        columnExists:
+          tableName: budget_items
+          columnName: root_budget_item_id
+      changes:
+        - sql:
+            splitStatements: true
+            endDelimiter: ;
+            sql: |
+              UPDATE budget_items
+              SET root_budget_item_id = NULL;
+
+              WITH RECURSIVE roots AS (
+                SELECT
+                  id,
+                  person_id,
+                  type,
+                  name,
+                  frequency,
+                  id AS root_id
+                FROM budget_items
+                WHERE previous_budget_item_id IS NULL
+                UNION ALL
+                SELECT
+                  b.id,
+                  b.person_id,
+                  b.type,
+                  b.name,
+                  b.frequency,
+                  r.root_id
+                FROM budget_items b
+                JOIN roots r
+                  ON b.previous_budget_item_id = r.id
+                  AND b.type = r.type
+                  AND b.name = r.name
+                  AND b.frequency = r.frequency
+                  AND b.person_id IS NOT DISTINCT FROM r.person_id
+              )
+              UPDATE budget_items b
+              SET root_budget_item_id = CASE
+                WHEN roots.root_id = b.id THEN NULL
+                ELSE roots.root_id
+              END
+              FROM roots
+              WHERE b.id = roots.id;
+
+  - changeSet:
+      id: 011d-root-budget-items-self
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        columnExists:
+          tableName: budget_items
+          columnName: root_budget_item_id
+      changes:
+        - sql:
+            splitStatements: true
+            endDelimiter: ;
+            sql: |
+              UPDATE budget_items
+              SET root_budget_item_id = id
+              WHERE root_budget_item_id IS NULL;
+
+  - changeSet:
+      id: 013-add-budget-item-suspensions
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        not:
+          tableExists:
+            tableName: budget_item_suspensions
+      changes:
+        - createTable:
+            tableName: budget_item_suspensions
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_budget_item_suspensions
+              - column:
+                  name: budget_item_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: start_date
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: end_date
+                  type: DATE
+                  constraints:
+                    nullable: true
+        - addForeignKeyConstraint:
+            baseTableName: budget_item_suspensions
+            baseColumnNames: budget_item_id
+            referencedTableName: budget_items
+            referencedColumnNames: id
+            constraintName: fk_budget_item_suspensions_budget_item
+            onDelete: CASCADE
+        - createIndex:
+            tableName: budget_item_suspensions
+            indexName: idx_budget_item_suspensions_item_dates
+            columns:
+              - column:
+                  name: budget_item_id
+              - column:
+                  name: start_date
+              - column:
+                  name: end_date

@@ -5,12 +5,14 @@
 
 import { createRouter, createWebHistory } from "vue-router";
 
+const EmptyRoute = { template: "<div></div>" };
+
 const routes = [
-  { path: "/", name: "overview" },
-  { path: "/cost-split", name: "cost-split" },
-  { path: "/income/:scope(.*)?", name: "income" },
-  { path: "/expenses/:scope(.*)?", name: "expenses" },
-  { path: "/master-data/:section?", name: "master-data" }
+  { path: "/", name: "overview", component: EmptyRoute },
+  { path: "/cost-split", name: "cost-split", component: EmptyRoute },
+  { path: "/income/:scope(.*)?", name: "income", component: EmptyRoute },
+  { path: "/expenses/:scope(.*)?", name: "expenses", component: EmptyRoute },
+  { path: "/master-data/:section?", name: "master-data", component: EmptyRoute }
 ];
 
 const router = createRouter({

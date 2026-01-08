@@ -30,6 +30,10 @@ SPDX-License-Identifier: GPL-3.0-only
         :onUpdateBudgetItem="updateBudgetItem"
         :onDeleteBudgetItem="deleteBudgetItem"
         :onOverrideBudgetItemForMonth="overrideBudgetItemForMonth"
+        :onSuspendBudgetItem="suspendBudgetItem"
+        :onResumeBudgetItem="resumeBudgetItem"
+        :onFetchBudgetItemHistory="fetchBudgetItemHistory"
+        :onDeleteBudgetItemSuspension="deleteBudgetItemSuspension"
         :onCreateCategoryCorrection="createCategoryCorrection"
         :onCreateCategory="createCategory"
         :fixedPersonId="currentDatenerfassungView.personId"
@@ -58,6 +62,10 @@ const props = defineProps({
   updateBudgetItem: { type: Function, required: true },
   deleteBudgetItem: { type: Function, required: true },
   overrideBudgetItemForMonth: { type: Function, required: true },
+  suspendBudgetItem: { type: Function, required: true },
+  resumeBudgetItem: { type: Function, required: true },
+  fetchBudgetItemHistory: { type: Function, required: true },
+  deleteBudgetItemSuspension: { type: Function, required: true },
   createCategoryCorrection: { type: Function, required: true },
   createCategory: { type: Function, required: true }
 });
