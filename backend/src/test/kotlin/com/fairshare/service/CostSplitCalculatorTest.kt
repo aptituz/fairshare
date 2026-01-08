@@ -6,10 +6,10 @@
 package com.fairshare.service
 
 import com.fairshare.model.Person
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 import java.math.BigDecimal
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 
 class CostSplitCalculatorTest {
 
@@ -61,7 +61,7 @@ class CostSplitCalculatorTest {
         assertNotNull(bobSplit, "Bob's split should not be null")
 
         // 3. Verify Alice's Split
-        assertEquals("Alice", aliceSplit.name)
+        assertEquals("Alice", aliceSplit!!.name)
         assertEquals(0, aliceSplit.personalIncome.compareTo(BigDecimal("2000.00")))
         assertEquals(0, aliceSplit.personalExpenses.compareTo(BigDecimal("500.00")))
         // Usable income: 2000 - 500 = 1500
