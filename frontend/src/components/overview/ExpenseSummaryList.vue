@@ -14,16 +14,6 @@
                     <span class="font-weight-medium" :class="categoryColorClass(category)">
                       {{ category.name }}
                     </span>
-                    <v-btn
-                      v-if="category.hasOneTime"
-                      size="x-small"
-                      variant="text"
-                      class="px-1 font-weight-bold"
-                      :class="categoryColorClass(category)"
-                      @click.stop="openOneTimeDialog(group.name, category)"
-                    >
-                      *
-                    </v-btn>
                   </div>
                   <span :class="categoryColorClass(category)">
                     {{ formatCurrency(category.total) }}
@@ -40,9 +30,6 @@
                       :class="expenseItemClass(item)"
                     >
                       <span>{{ item.budgetItemName }}</span>
-                      <span v-if="item.frequency === 'ONE_TIME'" :class="expenseItemClass(item)">
-                        *
-                      </span>
                     </v-list-item-title>
                     <template #append>
                       <span :class="expenseItemClass(item)">
@@ -67,29 +54,10 @@
     </template>
     <div v-else>Füge Ausgaben hinzu, um diese Liste zu füllen.</div>
   </div>
-  <v-dialog v-model="oneTimeDialogOpen" max-width="420">
-    <v-card>
-      <v-card-title>{{ oneTimeDialogTitle }}</v-card-title>
-      <v-card-text>
-        <v-list density="compact">
-          <v-list-item v-for="item in oneTimeDialogItems" :key="item.budgetItemId ?? item.budgetItemName">
-            <v-list-item-title>{{ item.budgetItemName }}</v-list-item-title>
-            <template #append>
-              <span>{{ formatCurrency(item.monthlyAmount) }}</span>
-            </template>
-          </v-list-item>
-        </v-list>
-      </v-card-text>
-      <v-card-actions>
-        <v-spacer />
-        <v-btn variant="text" @click="oneTimeDialogOpen = false">Schliessen</v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
+import { computed } from "vue";
 
 const props = defineProps({
   summary: { type: Object, default: null },
@@ -115,7 +83,6 @@ const groupedExpensesByPerson = computed(() => {
         total: 0,
         categoryId: item.categoryId,
         hasOneTime: false,
-        oneTimeItems: [],
         items: [],
         oneTimeDelta: 0
       });
@@ -125,7 +92,6 @@ const groupedExpensesByPerson = computed(() => {
     entry.items.push(item);
     if (item.frequency === "ONE_TIME") {
       entry.hasOneTime = true;
-      entry.oneTimeItems.push(item);
       entry.oneTimeDelta += Number(item.monthlyAmount || 0);
     }
   });
@@ -139,7 +105,6 @@ const groupedExpensesByPerson = computed(() => {
           total: value.total,
           rank: props.categoryRank(value.categoryId, value.name),
           hasOneTime: value.hasOneTime,
-          oneTimeItems: value.oneTimeItems,
           oneTimeDelta: value.oneTimeDelta,
           items: value.items.slice().sort((a, b) => a.budgetItemName.localeCompare(b.budgetItemName))
         }))
@@ -154,16 +119,6 @@ const groupedExpensesByPerson = computed(() => {
     ...orderedGroups.filter((entry) => entry.name !== "Gemeinsam")
   ];
 });
-
-const oneTimeDialogOpen = ref(false);
-const oneTimeDialogTitle = ref("");
-const oneTimeDialogItems = ref([]);
-
-const openOneTimeDialog = (groupName, category) => {
-  oneTimeDialogTitle.value = `Einmalige Ausgaben · ${groupName} · ${category.name}`;
-  oneTimeDialogItems.value = category.oneTimeItems || [];
-  oneTimeDialogOpen.value = true;
-};
 
 const colorClassForAmount = (amount) => {
   const numeric = Number(amount || 0);

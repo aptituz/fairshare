@@ -42,7 +42,7 @@
       </v-list-item>
       <v-divider class="my-4" />
       <template v-if="summary?.costSplit?.length">
-        <div v-for="entry in summary.costSplit" :key="entry.personId" class="mb-4">
+        <div v-for="entry in summary.costSplit" :key="entry.personId" class="mb-4 px-4">
           <div class="text-subtitle-2 font-weight-bold mb-2">{{ entry.name }}</div>
           <div class="d-flex flex-column ga-2">
             <div class="d-flex align-center justify-space-between">

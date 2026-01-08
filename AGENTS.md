@@ -14,6 +14,8 @@ Tech Stack:
 - Docker Compose to run backend + frontend
 
 Coding conventions:
+- Do not adjust tests without asking.
+- Business logic should be covered by tests.
 - Each Kotlin class should have its own file.
 - All API endpoints must be documented with springdoc OpenAPI annotations.
 - Definition of done: all API filters must use repository-level filtering (no in-memory filtering).
