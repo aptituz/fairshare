@@ -1,3 +1,8 @@
+<!--
+Copyright (C) 2025 Patrick Schoenfeld <patrick.schoenfeld@gmail.com>
+SPDX-License-Identifier: GPL-3.0-only
+-->
+
 <template>
   <v-app>
     <v-navigation-drawer permanent width="280">
