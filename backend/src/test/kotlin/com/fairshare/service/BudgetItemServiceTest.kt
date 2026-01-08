@@ -5,6 +5,8 @@
 
 package com.fairshare.service
 
+import com.fairshare.dto.BudgetItemOverrideRequest
+import com.fairshare.dto.CategoryCorrectionRequest
 import com.fairshare.dto.CreateBudgetItemRequest
 import com.fairshare.dto.UpdateBudgetItemRequest
 import com.fairshare.model.BudgetItem
@@ -174,5 +176,74 @@ class BudgetItemServiceTest {
 
         // then
         // No exception should be thrown
+    }
+
+    @Test
+    fun `overrideForMonth should throw an exception when override month is outside the item range`() {
+        // given
+        val budgetItem = BudgetItem(id = 1, name = "Item", amount = BigDecimal.TEN, type = BudgetItemType.INCOME, startDate = LocalDate.of(2025, 2, 1), endDate = LocalDate.of(2025, 3, 31))
+        val request = BudgetItemOverrideRequest(month = "2025-01", amount = BigDecimal.ONE)
+        `when`(budgetItemRepository.findById(1)).thenReturn(java.util.Optional.of(budgetItem))
+
+        // when / then
+        assertThrows(ResponseStatusException::class.java) {
+            budgetItemService.overrideForMonth(1, request)
+        }
+    }
+
+    @Test
+    fun `overrideForMonth should update a one-time item successfully`() {
+        // given
+        val budgetItem = BudgetItem(id = 1, name = "Item", amount = BigDecimal.TEN, type = BudgetItemType.INCOME, frequency = com.fairshare.model.Frequency.ONE_TIME, startDate = LocalDate.of(2025, 1, 15))
+        val request = BudgetItemOverrideRequest(month = "2025-01", amount = BigDecimal.ONE)
+        `when`(budgetItemRepository.findById(1)).thenReturn(java.util.Optional.of(budgetItem))
+        `when`(budgetItemRepository.save(any(BudgetItem::class.java))).thenAnswer { it.arguments[0] as BudgetItem }
+
+        // when
+        val result = budgetItemService.overrideForMonth(1, request)
+
+        // then
+        assertEquals(BigDecimal.ONE, result.amount)
+    }
+
+    @Test
+    fun `overrideForMonth should split a recurring item`() {
+        // given
+        val budgetItem = BudgetItem(id = 1, name = "Item", amount = BigDecimal.TEN, type = BudgetItemType.INCOME, startDate = LocalDate.of(2024, 1, 1), endDate = LocalDate.of(2025, 12, 31))
+        val request = BudgetItemOverrideRequest(month = "2025-06", amount = BigDecimal.ONE)
+        `when`(budgetItemRepository.findById(1)).thenReturn(java.util.Optional.of(budgetItem))
+        `when`(budgetItemRepository.save(any(BudgetItem::class.java))).thenAnswer { it.arguments[0] as BudgetItem }
+
+        // when
+        val result = budgetItemService.overrideForMonth(1, request)
+
+        // then
+        assertEquals(BigDecimal.ONE, result.amount)
+        assertEquals(com.fairshare.model.Frequency.ONE_TIME, result.frequency)
+        assertEquals(LocalDate.of(2025, 6, 1), result.startDate)
+    }
+
+    @Test
+    fun `createCategoryCorrection should create a new correction`() {
+        // given
+        val category = Category(1, "Category", BudgetItemType.EXPENSE, 1)
+        val request = CategoryCorrectionRequest(
+            categoryId = 1,
+            month = "2025-01",
+            actualAmount = BigDecimal("150")
+        )
+        val plannedItems = listOf(
+            BudgetItem(id = 1, name = "Item 1", amount = BigDecimal("100"), type = BudgetItemType.EXPENSE, category = category, startDate = LocalDate.of(2025,1,1))
+        )
+        `when`(categoryRepository.findById(1)).thenReturn(java.util.Optional.of(category))
+        `when`(budgetItemRepository.findPlannedForCategoryAndMonth(BudgetItemType.EXPENSE, 1, null, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31))).thenReturn(plannedItems)
+        `when`(budgetItemRepository.findUnplannedForCategoryAndMonth(BudgetItemType.EXPENSE, 1, null, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31))).thenReturn(emptyList())
+        `when`(budgetItemRepository.save(any(BudgetItem::class.java))).thenAnswer { it.arguments[0] as BudgetItem }
+
+        // when
+        val result = budgetItemService.createCategoryCorrection(request)
+
+        // then
+        assertEquals(BigDecimal("50"), result?.amount)
     }
 }
