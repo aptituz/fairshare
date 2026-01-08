@@ -8,10 +8,9 @@ package com.fairshare.service
 import com.fairshare.dto.BudgetItemOverrideRequest
 import com.fairshare.dto.BudgetItemResponse
 import com.fairshare.dto.CategoryCorrectionRequest
-import com.fairshare.dto.CategoryResponse
 import com.fairshare.dto.CreateBudgetItemRequest
-import com.fairshare.dto.PersonResponse
 import com.fairshare.dto.UpdateBudgetItemRequest
+import com.fairshare.mapper.toResponse
 import com.fairshare.model.BudgetItem
 import com.fairshare.model.BudgetItemType
 import com.fairshare.model.Frequency
@@ -302,28 +301,3 @@ private fun resolveEndDate(
     } else {
         requestedEndDate
     }
-
-private fun BudgetItem.toResponse(): BudgetItemResponse =
-    BudgetItemResponse(
-        id = id,
-        name = name,
-        amount = amount,
-        type = type,
-        frequency = frequency,
-        monthlyAmount = monthlyAmount(),
-        active = active,
-        planned = planned,
-        categoryCorrection = categoryCorrection,
-        startDate = startDate,
-        endDate = endDate,
-        category =
-            category?.let {
-                CategoryResponse(
-                    id = it.id,
-                    name = it.name,
-                    type = it.type,
-                    rank = it.rank,
-                )
-            },
-        person = person?.let { PersonResponse(id = it.id, name = it.name) },
-    )

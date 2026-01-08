@@ -8,6 +8,7 @@ package com.fairshare.service
 import com.fairshare.dto.CategoryResponse
 import com.fairshare.dto.CreateCategoryRequest
 import com.fairshare.dto.UpdateCategoryRequest
+import com.fairshare.mapper.toResponse
 import com.fairshare.model.Category
 import com.fairshare.repo.BudgetItemRepository
 import com.fairshare.repo.CategoryRepository
@@ -56,11 +57,3 @@ class CategoryService(
         categoryRepository.delete(category)
     }
 }
-
-private fun Category.toResponse(): CategoryResponse =
-    CategoryResponse(
-        id = id,
-        name = name,
-        type = type,
-        rank = rank,
-    )

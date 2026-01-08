@@ -8,6 +8,7 @@ package com.fairshare.service
 import com.fairshare.dto.CreatePersonRequest
 import com.fairshare.dto.PersonResponse
 import com.fairshare.dto.UpdatePersonRequest
+import com.fairshare.mapper.toResponse
 import com.fairshare.model.Person
 import com.fairshare.repo.BudgetItemRepository
 import com.fairshare.repo.PersonRepository
@@ -58,9 +59,3 @@ class PersonService(
         personRepository.delete(person)
     }
 }
-
-private fun Person.toResponse(): PersonResponse =
-    PersonResponse(
-        id = id,
-        name = name,
-    )
