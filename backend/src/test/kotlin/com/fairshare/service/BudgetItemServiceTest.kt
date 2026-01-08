@@ -6,6 +6,7 @@
 package com.fairshare.service
 
 import com.fairshare.dto.CreateBudgetItemRequest
+import com.fairshare.dto.UpdateBudgetItemRequest
 import com.fairshare.model.BudgetItem
 import com.fairshare.model.BudgetItemType
 import com.fairshare.model.Category
@@ -133,5 +134,45 @@ class BudgetItemServiceTest {
         assertThrows(ResponseStatusException::class.java) {
             budgetItemService.create(request)
         }
+    }
+
+    @Test
+    fun `update should save and return an updated budget item`() {
+        // given
+        val budgetItem = BudgetItem(id = 1, name = "Old Item", amount = BigDecimal.ONE, type = BudgetItemType.INCOME, startDate = LocalDate.now())
+        val category = Category(1, "Category", BudgetItemType.INCOME, 1)
+        val person = Person(1, "Person")
+        val request = UpdateBudgetItemRequest(
+            name = "Updated Item",
+            amount = BigDecimal.TEN,
+            categoryId = 1,
+            personId = 1
+        )
+        `when`(budgetItemRepository.findById(1)).thenReturn(java.util.Optional.of(budgetItem))
+        `when`(categoryRepository.findById(1)).thenReturn(java.util.Optional.of(category))
+        `when`(personRepository.findById(1)).thenReturn(java.util.Optional.of(person))
+        `when`(budgetItemRepository.save(any(BudgetItem::class.java))).thenAnswer { it.arguments[0] as BudgetItem }
+
+        // when
+        val result = budgetItemService.update(1, request)
+
+        // then
+        assertEquals("Updated Item", result.name)
+        assertEquals(BigDecimal.TEN, result.amount)
+        assertEquals(1, result.category?.id)
+        assertEquals(1, result.person?.id)
+    }
+
+    @Test
+    fun `delete should remove a budget item`() {
+        // given
+        val budgetItem = BudgetItem(id = 1, name = "Item", amount = BigDecimal.TEN, type = BudgetItemType.INCOME, startDate = LocalDate.now())
+        `when`(budgetItemRepository.findById(1)).thenReturn(java.util.Optional.of(budgetItem))
+
+        // when
+        budgetItemService.delete(1)
+
+        // then
+        // No exception should be thrown
     }
 }
