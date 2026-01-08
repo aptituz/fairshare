@@ -6,6 +6,10 @@ SPDX-License-Identifier: GPL-3.0-only
 <template>
   <v-app>
     <v-navigation-drawer permanent width="280">
+      <div class="px-4 py-4 d-flex align-center">
+        <v-img :src="logo" alt="Fairshare" max-height="80" max-width="248" contain class="w-100" />
+      </div>
+      <v-divider />
       <v-list nav v-model:opened="openGroups">
         <v-list-item
           title="Overview"
@@ -76,6 +80,7 @@ SPDX-License-Identifier: GPL-3.0-only
 <script setup>
 import { ref } from "vue";
 import MonthYearPicker from "./MonthYearPicker.vue";
+import logo from "../assets/logo.png";
 
 const props = defineProps({
   currentView: { type: String, required: true },
