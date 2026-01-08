@@ -24,6 +24,8 @@ Coding conventions:
 - Organize backend code into packages by responsibility (controller, service, repo, model, dto).
 - Use Liquibase for schema changes; avoid Hibernate auto-DDL.
 - All calculations must happen in backend services; frontend renders results only.
+- Extract mapping logic to the `com.fairshare.mapper` package.
+- Use custom exceptions from the `com.fairshare.exception` package for domain-specific errors and handle them in a centralized `@ControllerAdvice`. Avoid throwing `ResponseStatusException` from services.
 - Frontend: keep `frontend/src/App.vue` minimal; put UI in view components and shared logic in composables.
 
 Core API:
