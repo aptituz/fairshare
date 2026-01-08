@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025 Patrick Schoenfeld <patrick.schoenfeld@gmail.com>
+ * SPDX-License-Identifier: GPL-3.0-only
+ */
+
 import { computed, ref } from "vue";
 
 const apiBase = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";

@@ -1,3 +1,8 @@
+<!--
+Copyright (C) 2025 Patrick Schoenfeld <patrick.schoenfeld@gmail.com>
+SPDX-License-Identifier: GPL-3.0-only
+-->
+
 <template>
   <v-card>
     <v-card-title>Kategorien</v-card-title>
