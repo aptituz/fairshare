@@ -10,6 +10,8 @@ import com.fairshare.dto.BudgetItemResponse
 import com.fairshare.dto.CategoryCorrectionRequest
 import com.fairshare.dto.CreateBudgetItemRequest
 import com.fairshare.dto.UpdateBudgetItemRequest
+import com.fairshare.exception.BadRequestException
+import com.fairshare.exception.NotFoundException
 import com.fairshare.mapper.toResponse
 import com.fairshare.model.BudgetItem
 import com.fairshare.model.BudgetItemType
@@ -17,9 +19,7 @@ import com.fairshare.model.Frequency
 import com.fairshare.repo.BudgetItemRepository
 import com.fairshare.repo.CategoryRepository
 import com.fairshare.repo.PersonRepository
-import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
-import org.springframework.web.server.ResponseStatusException
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -37,13 +37,13 @@ class BudgetItemService(
         val category =
             request.categoryId?.let { id ->
                 categoryRepository.findById(id).orElseThrow {
-                    ResponseStatusException(HttpStatus.NOT_FOUND, "Category $id not found")
+                    NotFoundException("Category $id not found")
                 }
             }
         val person =
             request.personId?.let { id ->
                 personRepository.findById(id).orElseThrow {
-                    ResponseStatusException(HttpStatus.NOT_FOUND, "Person $id not found")
+                    NotFoundException("Person $id not found")
                 }
             }
 
@@ -76,22 +76,22 @@ class BudgetItemService(
     ): BudgetItemResponse {
         val budgetItem =
             budgetItemRepository.findById(id).orElseThrow {
-                ResponseStatusException(HttpStatus.NOT_FOUND, "Budget item $id not found")
+                NotFoundException("Budget item $id not found")
             }
         val name = request.name.trim()
         if (name.isBlank()) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Budget item name cannot be blank")
+            throw BadRequestException("Budget item name cannot be blank")
         }
         val category =
             request.categoryId?.let { categoryId ->
                 categoryRepository.findById(categoryId).orElseThrow {
-                    ResponseStatusException(HttpStatus.NOT_FOUND, "Category $categoryId not found")
+                    NotFoundException("Category $categoryId not found")
                 }
             }
         val person =
             request.personId?.let { personId ->
                 personRepository.findById(personId).orElseThrow {
-                    ResponseStatusException(HttpStatus.NOT_FOUND, "Person $personId not found")
+                    NotFoundException("Person $personId not found")
                 }
             }
         budgetItem.name = name
@@ -122,13 +122,13 @@ class BudgetItemService(
     ): BudgetItemResponse {
         val budgetItem =
             budgetItemRepository.findById(id).orElseThrow {
-                ResponseStatusException(HttpStatus.NOT_FOUND, "Budget item $id not found")
+                NotFoundException("Budget item $id not found")
             }
         val month =
             try {
                 YearMonth.parse(request.month)
             } catch (ex: Exception) {
-                throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid month format. Use YYYY-MM.")
+                throw BadRequestException("Invalid month format. Use YYYY-MM.")
             }
         val monthStart = month.atDay(1)
         val monthEnd = month.atEndOfMonth()
@@ -138,13 +138,12 @@ class BudgetItemService(
             !budgetItem.startDate.isAfter(monthEnd) &&
                 (budgetItem.endDate == null || !budgetItem.endDate!!.isBefore(monthStart))
         if (!withinRange) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Override month is outside the item range.")
+            throw BadRequestException("Override month is outside the item range.")
         }
 
         if (budgetItem.frequency == Frequency.ONE_TIME) {
             if (budgetItem.startDate.isBefore(monthStart) || budgetItem.startDate.isAfter(monthEnd)) {
-                throw ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
+                throw BadRequestException(
                     "One-time item is not scheduled in the selected month.",
                 )
             }
@@ -210,7 +209,7 @@ class BudgetItemService(
     fun delete(id: Long) {
         val budgetItem =
             budgetItemRepository.findById(id).orElseThrow {
-                ResponseStatusException(HttpStatus.NOT_FOUND, "Budget item $id not found")
+                NotFoundException("Budget item $id not found")
             }
         budgetItemRepository.delete(budgetItem)
     }
@@ -218,22 +217,22 @@ class BudgetItemService(
     fun createCategoryCorrection(request: CategoryCorrectionRequest): BudgetItemResponse? {
         val category =
             categoryRepository.findById(request.categoryId).orElseThrow {
-                ResponseStatusException(HttpStatus.NOT_FOUND, "Category ${request.categoryId} not found")
+                NotFoundException("Category ${request.categoryId} not found")
             }
         if (category.type != BudgetItemType.EXPENSE) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Category must be an expense category")
+            throw BadRequestException("Category must be an expense category")
         }
         val person =
             request.personId?.let { id ->
                 personRepository.findById(id).orElseThrow {
-                    ResponseStatusException(HttpStatus.NOT_FOUND, "Person $id not found")
+                    NotFoundException("Person $id not found")
                 }
             }
         val month =
             try {
                 YearMonth.parse(request.month)
             } catch (ex: Exception) {
-                throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid month format. Use YYYY-MM.")
+                throw BadRequestException("Invalid month format. Use YYYY-MM.")
             }
         val monthStart = month.atDay(1)
         val monthEnd = month.atEndOfMonth()

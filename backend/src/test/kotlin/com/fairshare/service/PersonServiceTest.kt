@@ -6,6 +6,8 @@
 package com.fairshare.service
 
 import com.fairshare.dto.CreatePersonRequest
+import com.fairshare.exception.BadRequestException
+import com.fairshare.exception.ConflictException
 import com.fairshare.model.Person
 import com.fairshare.repo.BudgetItemRepository
 import com.fairshare.repo.PersonRepository
@@ -18,7 +20,6 @@ import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
-import org.springframework.web.server.ResponseStatusException
 
 @ExtendWith(MockitoExtension::class)
 class PersonServiceTest {
@@ -73,7 +74,7 @@ class PersonServiceTest {
         val request = CreatePersonRequest(" ")
 
         // when / then
-        assertThrows(ResponseStatusException::class.java) {
+        assertThrows(BadRequestException::class.java) {
             personService.create(request)
         }
     }
@@ -100,7 +101,7 @@ class PersonServiceTest {
         `when`(budgetItemRepository.existsByPersonId(1)).thenReturn(true)
 
         // when / then
-        assertThrows(ResponseStatusException::class.java) {
+        assertThrows(ConflictException::class.java) {
             personService.delete(1)
         }
     }

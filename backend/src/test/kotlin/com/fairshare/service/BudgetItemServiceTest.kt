@@ -9,6 +9,8 @@ import com.fairshare.dto.BudgetItemOverrideRequest
 import com.fairshare.dto.CategoryCorrectionRequest
 import com.fairshare.dto.CreateBudgetItemRequest
 import com.fairshare.dto.UpdateBudgetItemRequest
+import com.fairshare.exception.BadRequestException
+import com.fairshare.exception.NotFoundException
 import com.fairshare.model.BudgetItem
 import com.fairshare.model.BudgetItemType
 import com.fairshare.model.Category
@@ -25,7 +27,6 @@ import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
-import org.springframework.web.server.ResponseStatusException
 import java.math.BigDecimal
 import java.time.LocalDate
 
@@ -115,7 +116,7 @@ class BudgetItemServiceTest {
         `when`(categoryRepository.findById(1)).thenReturn(java.util.Optional.empty())
 
         // when / then
-        assertThrows(ResponseStatusException::class.java) {
+        assertThrows(NotFoundException::class.java) {
             budgetItemService.create(request)
         }
     }
@@ -133,7 +134,7 @@ class BudgetItemServiceTest {
         `when`(personRepository.findById(1)).thenReturn(java.util.Optional.empty())
 
         // when / then
-        assertThrows(ResponseStatusException::class.java) {
+        assertThrows(NotFoundException::class.java) {
             budgetItemService.create(request)
         }
     }
@@ -186,7 +187,7 @@ class BudgetItemServiceTest {
         `when`(budgetItemRepository.findById(1)).thenReturn(java.util.Optional.of(budgetItem))
 
         // when / then
-        assertThrows(ResponseStatusException::class.java) {
+        assertThrows(BadRequestException::class.java) {
             budgetItemService.overrideForMonth(1, request)
         }
     }

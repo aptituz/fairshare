@@ -8,13 +8,14 @@ package com.fairshare.service
 import com.fairshare.dto.CategoryResponse
 import com.fairshare.dto.CreateCategoryRequest
 import com.fairshare.dto.UpdateCategoryRequest
+import com.fairshare.exception.BadRequestException
+import com.fairshare.exception.ConflictException
+import com.fairshare.exception.NotFoundException
 import com.fairshare.mapper.toResponse
 import com.fairshare.model.Category
 import com.fairshare.repo.BudgetItemRepository
 import com.fairshare.repo.CategoryRepository
-import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
-import org.springframework.web.server.ResponseStatusException
 
 @Service
 class CategoryService(
@@ -36,11 +37,11 @@ class CategoryService(
     ): CategoryResponse {
         val category =
             categoryRepository.findById(id).orElseThrow {
-                ResponseStatusException(HttpStatus.NOT_FOUND, "Category $id not found")
+                NotFoundException("Category $id not found")
             }
         val name = request.name.trim()
         if (name.isBlank()) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Category name cannot be blank")
+            throw BadRequestException("Category name cannot be blank")
         }
         category.name = name
         return categoryRepository.save(category).toResponse()
@@ -49,10 +50,10 @@ class CategoryService(
     fun delete(id: Long) {
         val category =
             categoryRepository.findById(id).orElseThrow {
-                ResponseStatusException(HttpStatus.NOT_FOUND, "Category $id not found")
+                NotFoundException("Category $id not found")
             }
         if (budgetItemRepository.existsByCategoryId(id)) {
-            throw ResponseStatusException(HttpStatus.CONFLICT, "Category $id is used by budget items")
+            throw ConflictException("Category $id is used by budget items")
         }
         categoryRepository.delete(category)
     }

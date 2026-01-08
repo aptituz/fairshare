@@ -7,6 +7,9 @@ package com.fairshare.service
 
 import com.fairshare.dto.CreateCategoryRequest
 import com.fairshare.dto.UpdateCategoryRequest
+import com.fairshare.exception.BadRequestException
+import com.fairshare.exception.ConflictException
+import com.fairshare.exception.NotFoundException
 import com.fairshare.model.BudgetItemType
 import com.fairshare.model.Category
 import com.fairshare.repo.BudgetItemRepository
@@ -20,7 +23,6 @@ import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
-import org.springframework.web.server.ResponseStatusException
 
 @ExtendWith(MockitoExtension::class)
 class CategoryServiceTest {
@@ -99,7 +101,7 @@ class CategoryServiceTest {
         `when`(categoryRepository.findById(1)).thenReturn(java.util.Optional.empty())
 
         // when / then
-        assertThrows(ResponseStatusException::class.java) {
+        assertThrows(NotFoundException::class.java) {
             categoryService.update(1, request)
         }
     }
@@ -112,7 +114,7 @@ class CategoryServiceTest {
         `when`(categoryRepository.findById(1)).thenReturn(java.util.Optional.of(category))
 
         // when / then
-        assertThrows(ResponseStatusException::class.java) {
+        assertThrows(BadRequestException::class.java) {
             categoryService.update(1, request)
         }
     }
@@ -139,7 +141,7 @@ class CategoryServiceTest {
         `when`(budgetItemRepository.existsByCategoryId(1)).thenReturn(true)
 
         // when / then
-        assertThrows(ResponseStatusException::class.java) {
+        assertThrows(ConflictException::class.java) {
             categoryService.delete(1)
         }
     }
@@ -150,7 +152,7 @@ class CategoryServiceTest {
         `when`(categoryRepository.findById(1)).thenReturn(java.util.Optional.empty())
 
         // when / then
-        assertThrows(ResponseStatusException::class.java) {
+        assertThrows(NotFoundException::class.java) {
             categoryService.delete(1)
         }
     }
