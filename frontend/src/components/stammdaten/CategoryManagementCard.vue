@@ -53,20 +53,19 @@ SPDX-License-Identifier: GPL-3.0-only
         </template>
       </v-list-item>
       <v-list-item>
-        <v-form class="w-100 d-flex ga-2" @submit.prevent="submitCategory('INCOME', newIncomeCategoryName)">
-          <v-text-field
-            v-model="newIncomeCategoryName"
-            label="Neue Einnahmen-Kategorie"
-            placeholder="Gehalt"
-            hide-details
-            density="compact"
-            class="flex-grow-1"
-            required
-          />
-          <v-btn :loading="categorySaving" type="submit" color="primary">
-            Hinzufügen
-          </v-btn>
-        </v-form>
+        <v-menu>
+          <template #activator="{ props }">
+            <v-btn variant="outlined" size="small" v-bind="props">Aktionen</v-btn>
+          </template>
+          <v-list density="compact">
+            <v-list-item @click="incomeDialogOpen = true">
+              <v-list-item-title>Einnahmen-Kategorie hinzufuegen</v-list-item-title>
+            </v-list-item>
+            <v-list-item @click="expenseDialogOpen = true">
+              <v-list-item-title>Ausgaben-Kategorie hinzufuegen</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
       </v-list-item>
       <v-divider class="my-4" />
       <v-list-subheader class="font-weight-bold">Ausgaben</v-list-subheader>
@@ -110,23 +109,51 @@ SPDX-License-Identifier: GPL-3.0-only
           </div>
         </template>
       </v-list-item>
-      <v-list-item>
-        <v-form class="w-100 d-flex ga-2" @submit.prevent="submitCategory('EXPENSE', newExpenseCategoryName)">
-          <v-text-field
-            v-model="newExpenseCategoryName"
-            label="Neue Ausgaben-Kategorie"
-            placeholder="Miete"
-            hide-details
-            density="compact"
-            class="flex-grow-1"
-            required
-          />
-          <v-btn :loading="categorySaving" type="submit" color="primary">
+    </v-list>
+    <v-dialog v-model="incomeDialogOpen" max-width="520">
+      <v-card>
+        <v-card-title>Neue Einnahmen-Kategorie</v-card-title>
+        <v-card-text>
+          <v-form @submit.prevent="submitCategory('INCOME', newIncomeCategoryName)">
+            <v-text-field
+              v-model="newIncomeCategoryName"
+              label="Name"
+              placeholder="Gehalt"
+              required
+            />
+          </v-form>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="incomeDialogOpen = false">Abbrechen</v-btn>
+          <v-btn :loading="categorySaving" color="primary" @click="submitCategory('INCOME', newIncomeCategoryName)">
             Hinzufügen
           </v-btn>
-        </v-form>
-      </v-list-item>
-    </v-list>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+    <v-dialog v-model="expenseDialogOpen" max-width="520">
+      <v-card>
+        <v-card-title>Neue Ausgaben-Kategorie</v-card-title>
+        <v-card-text>
+          <v-form @submit.prevent="submitCategory('EXPENSE', newExpenseCategoryName)">
+            <v-text-field
+              v-model="newExpenseCategoryName"
+              label="Name"
+              placeholder="Miete"
+              required
+            />
+          </v-form>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="expenseDialogOpen = false">Abbrechen</v-btn>
+          <v-btn :loading="categorySaving" color="primary" @click="submitCategory('EXPENSE', newExpenseCategoryName)">
+            Hinzufügen
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-card>
 </template>
 
@@ -146,14 +173,18 @@ const newIncomeCategoryName = ref("");
 const newExpenseCategoryName = ref("");
 const editingCategoryId = ref(null);
 const editingCategoryName = ref("");
+const incomeDialogOpen = ref(false);
+const expenseDialogOpen = ref(false);
 
 const submitCategory = async (type, name) => {
   const created = await props.createCategory(type, name);
   if (created) {
     if (type === "INCOME") {
       newIncomeCategoryName.value = "";
+      incomeDialogOpen.value = false;
     } else {
       newExpenseCategoryName.value = "";
+      expenseDialogOpen.value = false;
     }
   }
 };

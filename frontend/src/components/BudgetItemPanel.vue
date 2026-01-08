@@ -4,134 +4,24 @@ SPDX-License-Identifier: GPL-3.0-only
 -->
 
 <template>
-  <v-card>
+    <v-card>
     <v-card-title>{{ title }}</v-card-title>
     <v-card-subtitle>{{ description }}</v-card-subtitle>
     <v-card-text>
-      <v-form @submit.prevent="submit">
-        <v-text-field
-          v-if="showNameField"
-          v-model="name"
-          label="Name"
-          :placeholder="placeholder"
-          required
-        />
-        <v-text-field
-          v-model="amount"
-          label="Betrag"
-          type="number"
-          step="0.01"
-          min="0"
-          required
-        />
-        <v-select
-          v-if="showFrequencyPicker"
-          v-model="frequency"
-          label="Frequenz"
-          :items="frequencyOptions"
-          item-title="title"
-          item-value="value"
-          required
-        />
-        <MonthYearPicker
-          v-if="frequency === 'ONE_TIME'"
-          :model-value="oneTimeMonth"
-          label="Monat"
-          :year-range="20"
-          @update:modelValue="updateOneTimeMonth"
-        />
-        <div v-if="showStartEndFields" class="text-caption">Beruecksichtigen ab</div>
-        <MonthYearPicker
-          v-if="showStartEndFields"
-          :model-value="startMonth"
-          :year-range="20"
-          @update:modelValue="updateStartMonth"
-        />
-        <div v-if="showStartEndFields" class="text-caption">Beruecksichtigen bis</div>
-        <MonthYearPicker
-          v-if="showStartEndFields"
-          :model-value="endMonth"
-          :year-range="20"
-          :allow-empty="true"
-          :clearable="true"
-          @update:modelValue="updateEndMonth"
-        />
-        <v-combobox
-          v-if="allowCategoryCreate"
-          v-model="categoryId"
-          v-model:search="categorySearch"
-          label="Kategorie"
-          :items="sortedCategories"
-          item-title="label"
-          item-value="id"
-          clearable
-          :hide-no-data="false"
-          :return-object="false"
-          @keydown.enter.prevent="commitCategorySearch"
-        >
-          <template #no-data>
-            <v-list-item @click="commitCategorySearch">
-              <v-list-item-title>
-                Neue Kategorie erstellen: {{ categorySearch || "…" }}
-              </v-list-item-title>
-            </v-list-item>
+      <div class="d-flex justify-end">
+        <v-menu>
+          <template #activator="{ props }">
+            <v-btn color="primary" v-bind="props">Aktionen</v-btn>
           </template>
-        </v-combobox>
-        <v-autocomplete
-          v-else
-          v-model="categoryId"
-          label="Kategorie"
-          :items="sortedCategories"
-          item-title="label"
-          item-value="id"
-          clearable
-        />
-        <v-autocomplete
-          v-if="showPersonSelector"
-          v-model="personId"
-          label="Person"
-          :items="persons"
-          item-title="name"
-          item-value="id"
-          clearable
-        />
-        <v-btn :loading="saving" type="submit" color="primary" class="mt-2">
-          {{ buttonLabel }}
-        </v-btn>
-      </v-form>
-      <v-divider v-if="showCorrectionForm" class="my-4" />
-      <div v-if="showCorrectionForm">
-        <div class="text-subtitle-2 font-weight-medium mb-2">
-          Korrektur fuer Ist-Betrag
-        </div>
-        <div class="d-flex flex-column ga-2">
-          <v-autocomplete
-            v-model="correctionCategoryId"
-            label="Kategorie"
-            :items="sortedCategories"
-            item-title="label"
-            item-value="id"
-            density="compact"
-            hide-details
-            clearable
-          />
-          <v-text-field
-            v-model="correctionAmount"
-            label="Ist-Betrag (aktueller Monat)"
-            type="number"
-            step="0.01"
-            min="0"
-            density="compact"
-            hide-details
-          />
-          <v-btn
-            size="small"
-            variant="outlined"
-            @click="submitCategoryCorrection"
-          >
-            Korrektur erfassen
-          </v-btn>
-        </div>
+          <v-list density="compact">
+            <v-list-item @click="openCreateDialog">
+              <v-list-item-title>{{ buttonLabel }}</v-list-item-title>
+            </v-list-item>
+            <v-list-item v-if="showCorrectionForm" @click="correctionDialogOpen = true">
+              <v-list-item-title>Ist-Abweichung erfassen</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
       </div>
     </v-card-text>
     <v-divider />
@@ -160,9 +50,7 @@ SPDX-License-Identifier: GPL-3.0-only
             <tr v-for="budgetItem in group.items" :key="budgetItem.id">
               <td>
                 <div class="d-flex align-center ga-2">
-                  <span style="cursor: pointer;" @click="startEdit(budgetItem)">
-                    {{ budgetItem.name }}
-                  </span>
+                  <span>{{ budgetItem.name }}</span>
                   <v-chip v-if="budgetItem.active === false" size="x-small" color="warning">
                     Inaktiv
                   </v-chip>
@@ -183,15 +71,27 @@ SPDX-License-Identifier: GPL-3.0-only
                 />
               </td>
               <td class="text-right">
-                <v-btn
-                  size="small"
-                  variant="text"
-                  icon
-                  color="error"
-                  @click="remove(budgetItem.id)"
-                >
-                  <v-icon icon="mdi-delete" />
-                </v-btn>
+                <v-menu>
+                  <template #activator="{ props }">
+                    <v-btn size="small" variant="text" icon v-bind="props">
+                      <v-icon icon="mdi-dots-vertical" />
+                    </v-btn>
+                  </template>
+                  <v-list density="compact">
+                    <v-list-item @click="startEdit(budgetItem)">
+                      <v-list-item-title class="d-flex align-center ga-2">
+                        <v-icon icon="mdi-pencil" size="small" />
+                        Bearbeiten
+                      </v-list-item-title>
+                    </v-list-item>
+                    <v-list-item @click="remove(budgetItem.id)">
+                      <v-list-item-title class="d-flex align-center ga-2">
+                        <v-icon icon="mdi-delete" size="small" />
+                        Loeschen
+                      </v-list-item-title>
+                    </v-list-item>
+                  </v-list>
+                </v-menu>
               </td>
             </tr>
             <tr>
@@ -212,26 +112,138 @@ SPDX-License-Identifier: GPL-3.0-only
     <v-list v-if="!showFrequencyTable" density="compact">
       <v-list-item v-for="budgetItem in budgetItems" :key="budgetItem.id">
           <v-list-item-title>
-            <span style="cursor: pointer;" @click="startEdit(budgetItem)">{{ budgetItem.name }}</span>
+            <span>{{ budgetItem.name }}</span>
           </v-list-item-title>
           <template #append>
             <div class="d-flex align-center ga-3">
-              <span style="cursor: pointer;" @click="startEdit(budgetItem)">
-                {{ formatCurrency(budgetItem.amount) }}
-              </span>
-              <v-btn
-                size="small"
-                variant="text"
-                icon
-                color="error"
-                @click="remove(budgetItem.id)"
-              >
-                <v-icon icon="mdi-delete" />
-              </v-btn>
+              <span>{{ formatCurrency(budgetItem.amount) }}</span>
+              <v-menu>
+                <template #activator="{ props }">
+                  <v-btn size="small" variant="text" icon v-bind="props">
+                    <v-icon icon="mdi-dots-vertical" />
+                  </v-btn>
+                </template>
+                <v-list density="compact">
+                  <v-list-item @click="startEdit(budgetItem)">
+                    <v-list-item-title class="d-flex align-center ga-2">
+                      <v-icon icon="mdi-pencil" size="small" />
+                      Bearbeiten
+                    </v-list-item-title>
+                  </v-list-item>
+                  <v-list-item @click="remove(budgetItem.id)">
+                    <v-list-item-title class="d-flex align-center ga-2">
+                      <v-icon icon="mdi-delete" size="small" />
+                      Loeschen
+                    </v-list-item-title>
+                  </v-list-item>
+                </v-list>
+              </v-menu>
             </div>
           </template>
       </v-list-item>
     </v-list>
+    <v-dialog v-model="createDialogOpen" max-width="560">
+      <v-card>
+        <v-card-title>{{ buttonLabel }}</v-card-title>
+        <v-card-text>
+          <v-form @submit.prevent="submit">
+            <v-text-field
+              v-if="showNameField"
+              v-model="name"
+              label="Name"
+              :placeholder="placeholder"
+              required
+            />
+            <v-text-field
+              v-model="amount"
+              label="Betrag"
+              type="number"
+              step="0.01"
+              min="0"
+              required
+            />
+            <v-select
+              v-if="showFrequencyPicker"
+              v-model="frequency"
+              label="Frequenz"
+              :items="frequencyOptions"
+              item-title="title"
+              item-value="value"
+              required
+            />
+            <MonthYearPicker
+              v-if="frequency === 'ONE_TIME'"
+              :model-value="oneTimeMonth"
+              label="Monat"
+              :year-range="20"
+              @update:modelValue="updateOneTimeMonth"
+            />
+            <div v-if="showStartEndFields" class="text-caption">Beruecksichtigen ab</div>
+            <MonthYearPicker
+              v-if="showStartEndFields"
+              :model-value="startMonth"
+              :year-range="20"
+              @update:modelValue="updateStartMonth"
+            />
+            <div v-if="showStartEndFields" class="text-caption">Beruecksichtigen bis</div>
+            <MonthYearPicker
+              v-if="showStartEndFields"
+              :model-value="endMonth"
+              :year-range="20"
+              :allow-empty="true"
+              :clearable="true"
+              @update:modelValue="updateEndMonth"
+            />
+            <v-combobox
+              v-if="allowCategoryCreate"
+              v-model="categoryId"
+              v-model:search="categorySearch"
+              label="Kategorie"
+              :items="sortedCategories"
+              item-title="label"
+              item-value="id"
+              clearable
+              :hide-no-data="false"
+              :return-object="false"
+              @keydown.enter.prevent="commitCategorySearch"
+            >
+              <template #no-data>
+                <v-list-item @click="commitCategorySearch">
+                  <v-list-item-title>
+                    Neue Kategorie erstellen: {{ categorySearch || "…" }}
+                  </v-list-item-title>
+                </v-list-item>
+              </template>
+            </v-combobox>
+            <v-autocomplete
+              v-else
+              v-model="categoryId"
+              label="Kategorie"
+              :items="sortedCategories"
+              item-title="label"
+              item-value="id"
+              clearable
+            />
+            <v-autocomplete
+              v-if="showPersonSelector"
+              v-model="personId"
+              label="Person"
+              :items="persons"
+              item-title="name"
+              item-value="id"
+              clearable
+            />
+          </v-form>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="createDialogOpen = false">Abbrechen</v-btn>
+          <v-btn :loading="saving" color="primary" @click="submit">
+            {{ buttonLabel }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
     <v-dialog v-model="editDialogOpen" max-width="560">
       <v-card>
         <v-card-title>Budget-Posten bearbeiten</v-card-title>
@@ -343,6 +355,39 @@ SPDX-License-Identifier: GPL-3.0-only
         </v-card-actions>
       </v-card>
     </v-dialog>
+    <v-dialog v-model="correctionDialogOpen" max-width="520">
+      <v-card>
+        <v-card-title>Ist-Abweichung erfassen</v-card-title>
+        <v-card-text>
+          <div class="d-flex flex-column ga-2">
+            <v-autocomplete
+              v-model="correctionCategoryId"
+              label="Kategorie"
+              :items="sortedCategories"
+              item-title="label"
+              item-value="id"
+              density="compact"
+              hide-details
+              clearable
+            />
+            <v-text-field
+              v-model="correctionAmount"
+              label="Ist-Betrag (aktueller Monat)"
+              type="number"
+              step="0.01"
+              min="0"
+              density="compact"
+              hide-details
+            />
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="correctionDialogOpen = false">Abbrechen</v-btn>
+          <v-btn color="primary" @click="submitCategoryCorrection">Erfassen</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
     <v-dialog v-model="confirmOverrideOpen" max-width="420">
       <v-card>
         <v-card-title>Betrag aendern</v-card-title>
@@ -407,12 +452,14 @@ const editingOneTimeMonth = ref("");
 const editingStartMonth = ref("");
 const editingEndMonth = ref("");
 const editingActive = ref(true);
+const createDialogOpen = ref(false);
 const editDialogOpen = ref(false);
 const confirmOverrideOpen = ref(false);
 const originalAmount = ref("");
 const pendingSaveId = ref(null);
 const correctionCategoryId = ref(null);
 const correctionAmount = ref("");
+const correctionDialogOpen = ref(false);
 
 const buttonLabel = computed(() =>
   props.type === "INCOME" ? "Einnahme hinzufügen" : "Ausgabe hinzufügen"
@@ -602,6 +649,10 @@ const updateEditingEndMonth = (value) => {
   editingEndMonth.value = value;
 };
 
+const openCreateDialog = () => {
+  createDialogOpen.value = true;
+};
+
 const submit = async () => {
   const derivedName = showNameField.value ? name.value : categoryNameFor(categoryId.value);
   const effectivePersonId = props.showPersonSelector ? personId.value : props.fixedPersonId ?? null;
@@ -632,6 +683,7 @@ const submit = async () => {
     oneTimeMonth.value = "";
     startMonth.value = props.summaryMonth;
     endMonth.value = "";
+    createDialogOpen.value = false;
   }
 };
 
@@ -648,6 +700,7 @@ const submitCategoryCorrection = async () => {
   if (success) {
     correctionCategoryId.value = null;
     correctionAmount.value = "";
+    correctionDialogOpen.value = false;
   }
 };
 

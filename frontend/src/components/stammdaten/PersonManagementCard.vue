@@ -8,17 +8,16 @@ SPDX-License-Identifier: GPL-3.0-only
     <v-card-title>Personen</v-card-title>
     <v-card-subtitle>Lege Personen fuer die Zuordnung an.</v-card-subtitle>
     <v-card-text>
-      <v-form @submit.prevent="submitPerson">
-        <v-text-field
-          v-model="newPersonName"
-          label="Name"
-          placeholder="Alex"
-          required
-        />
-        <v-btn :loading="personSaving" type="submit" color="primary">
-          Person hinzufügen
-        </v-btn>
-      </v-form>
+      <v-menu>
+        <template #activator="{ props }">
+          <v-btn color="primary" v-bind="props">Aktionen</v-btn>
+        </template>
+        <v-list density="compact">
+          <v-list-item @click="personDialogOpen = true">
+            <v-list-item-title>Person hinzufuegen</v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </v-menu>
     </v-card-text>
     <v-divider />
     <v-list density="compact">
@@ -52,6 +51,28 @@ SPDX-License-Identifier: GPL-3.0-only
         </template>
       </v-list-item>
     </v-list>
+    <v-dialog v-model="personDialogOpen" max-width="520">
+      <v-card>
+        <v-card-title>Neue Person</v-card-title>
+        <v-card-text>
+          <v-form @submit.prevent="submitPerson">
+            <v-text-field
+              v-model="newPersonName"
+              label="Name"
+              placeholder="Alex"
+              required
+            />
+          </v-form>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="personDialogOpen = false">Abbrechen</v-btn>
+          <v-btn :loading="personSaving" color="primary" @click="submitPerson">
+            Hinzufügen
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-card>
 </template>
 
@@ -68,11 +89,13 @@ const props = defineProps({
 const newPersonName = ref("");
 const editingPersonId = ref(null);
 const editingPersonName = ref("");
+const personDialogOpen = ref(false);
 
 const submitPerson = async () => {
   const success = await props.createPerson(newPersonName.value);
   if (success) {
     newPersonName.value = "";
+    personDialogOpen.value = false;
   }
 };
 
