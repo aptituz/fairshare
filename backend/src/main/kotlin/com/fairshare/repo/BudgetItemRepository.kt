@@ -79,4 +79,6 @@ interface BudgetItemRepository : JpaRepository<BudgetItem, Long> {
     ): List<BudgetItem>
 
     fun existsByCategoryId(categoryId: Long): Boolean
+
+    fun existsByPersonId(personId: Long): Boolean
 }
