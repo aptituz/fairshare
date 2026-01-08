@@ -37,7 +37,10 @@ class MonthlySummaryCalculatorTest {
         val summary = calculator.calculate(incomeItems, expenseItems, listOf(personA, personB))
 
         assertBigDecimalEquals("2000.00", summary.budgetPerPerson)
-        assertBigDecimalEquals("4000.00", summary.netResultShared)
+        assertBigDecimalEquals("4000.00", summary.sharedHouseholdBudgetBalanceWithoutOneTimeIncome)
+        assertBigDecimalEquals("5000.00", summary.totalHouseholdIncome)
+        assertBigDecimalEquals("2000.00", summary.totalHouseholdExpenditure)
+        assertBigDecimalEquals("3000.00", summary.householdBudgetBalance)
 
         val aSplit = summary.costSplit.first { it.personId == personA.id }
         val bSplit = summary.costSplit.first { it.personId == personB.id }
@@ -68,7 +71,10 @@ class MonthlySummaryCalculatorTest {
         val summary = calculator.calculate(incomeItems, expenseItems, listOf(personA, personB))
 
         assertBigDecimalEquals("300.00", summary.budgetPerPerson)
-        assertBigDecimalEquals("600.00", summary.netResultShared)
+        assertBigDecimalEquals("600.00", summary.sharedHouseholdBudgetBalanceWithoutOneTimeIncome)
+        assertBigDecimalEquals("3500.00", summary.totalHouseholdIncome)
+        assertBigDecimalEquals("4700.00", summary.totalHouseholdExpenditure)
+        assertBigDecimalEquals("-1200.00", summary.householdBudgetBalance)
 
         val aSplit = summary.costSplit.first { it.personId == personA.id }
         val bSplit = summary.costSplit.first { it.personId == personB.id }

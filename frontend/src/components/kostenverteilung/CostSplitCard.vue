@@ -10,33 +10,33 @@ SPDX-License-Identifier: GPL-3.0-only
     <v-divider class="my-4" />
     <v-list density="compact">
       <v-list-item>
-        <v-list-item-title class="font-weight-bold">Gesamteinkommen</v-list-item-title>
+        <v-list-item-title class="font-weight-bold">Gesamthaushaltseinkommen</v-list-item-title>
         <template #append>
-          <span class="font-weight-bold">{{ formatCurrency(summary?.totalIncome) }}</span>
+          <span class="font-weight-bold">{{ formatCurrency(summary?.totalHouseholdIncome) }}</span>
         </template>
       </v-list-item>
       <v-list-item>
-        <v-list-item-title>Gesamteinkommen ohne ungeplante einmalige Einkuenfte</v-list-item-title>
+        <v-list-item-title>Haushaltseinkommen ohne ungeplante einmalige Einkuenfte</v-list-item-title>
         <template #append>
-          <span>{{ formatCurrency(summary?.totalIncomeRecurring ?? summary?.totalIncome) }}</span>
+          <span>{{ formatCurrency(summary?.totalHouseholdIncomeRecurring ?? summary?.totalHouseholdIncome) }}</span>
         </template>
       </v-list-item>
       <v-list-item>
-        <v-list-item-title>Gesamtausgaben</v-list-item-title>
+        <v-list-item-title>Gesamthaushaltsausgaben</v-list-item-title>
         <template #append>
-          <span>{{ formatCurrency(summary?.totalExpenses) }}</span>
+          <span>{{ formatCurrency(summary?.totalHouseholdExpenditure) }}</span>
         </template>
       </v-list-item>
       <v-list-item>
-        <v-list-item-title>Gesamtausgaben gemeinsam</v-list-item-title>
+        <v-list-item-title>Gemeinsame Haushaltsausgaben</v-list-item-title>
         <template #append>
-          <span>{{ formatCurrency(summary?.sharedExpenseTotal) }}</span>
+          <span>{{ formatCurrency(summary?.sharedHouseholdExpenditureTotal) }}</span>
         </template>
       </v-list-item>
       <v-list-item>
-        <v-list-item-title>Nettoergebnis (gemeinsam)</v-list-item-title>
+        <v-list-item-title>Haushaltssaldo (gemeinsam)</v-list-item-title>
         <template #append>
-          <span>{{ formatCurrency(summary?.netResultShared) }}</span>
+          <span>{{ formatCurrency(summary?.sharedHouseholdBudgetBalanceWithoutOneTimeIncome) }}</span>
         </template>
       </v-list-item>
       <v-list-item>

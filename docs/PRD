@@ -12,9 +12,9 @@ Fairshare allows users to plan the finances of a household, including planning
 recurring income and expense (budget items) both on a personal and shared level.
 It then is supposed to calculate some things:
 
-- Total monthly income (both per person and shared)
-- Total monthly expenses (both per person and shared)
-- The net result
+- Total household income (both per person and shared)
+- Total household expenditure (both per person and shared)
+- The household budget balance
 - A cost split for shared expenses
 
 Fairshare is a **planning tool**, not an accounting system. However, it allows
@@ -24,14 +24,14 @@ for statistics and forecasting.
 
 ## Definitions
 
-Total income: the sum of all income (personal and shared), including one-time payments and adjustments
-Total income without one-time payments: Total income excluding unplanned one-time income (planned = false)
-Total expenses: the sum of all expenses (personal and shared), including one-time payments and adjustments
-Total shared expenses: the sum of shared expenses (person_id = null), including one-time payments and adjustments
-Net result: Total income minus Total expenses
-Net result (shared): the difference between Total income without one-time payments and Total shared expenses
-Shared income total (sharedIncomeTotal): total income from shared budget items
-Shared expense total (sharedExpenseTotal): total expenses from shared budget items (same as Total shared expenses)
+Total household income: the sum of all income (personal and shared) for a given time period
+Total household income without one-time payments: total household income excluding unplanned one-time income (planned = false)
+Total household expenditure: the sum of all expenses (personal and shared) for a given time period
+Total shared household expenditures: the sum of shared expenses (person_id = null) for a given time period
+Household budget balance: the difference between Total household expenditure and Total household income
+Net result (shared): the difference between Total household income without one-time payments and Total shared household expenditures
+Shared household income total (sharedHouseholdIncomeTotal): total income from shared budget items
+Shared household expenditure total (sharedHouseholdExpenditureTotal): total expenses from shared budget items (same as Total shared household expenditures)
 
 Shared budget item: a budget item (income or expense) that is not assigned to a specific person
 Personal budget item: a budget item (income or expense) that is assigned and counted toward that person
@@ -44,9 +44,9 @@ Category correction: a total for a category where the value differs from the pla
 
 Personal retention value (Selbstbehalt): personal expenses kept by a person before cost split (reported as personalExpenses in costSplit)
 Personal usable income: personal income minus personal retention value
-Total pool: sharedIncomeTotal plus the sum of personal usable income
-Budget per person: (totalPool - sharedExpenseTotal) / numberOfPersons when totalPool >= sharedExpenseTotal
-Personal contribution: personal usable income minus budget per person (when equal budget is possible)
+Budget per person: sharedHouseholdBudgetBalanceWithoutOneTimeIncome / numberOfPersons
+Personal cost share: personal income minus budget per person
+Personal contribution: per-person contribution based on the cost split rules
 Cost split (Kostenverteilung): the set of per-person personal contribution values and remaining budgets
 
 
@@ -60,10 +60,10 @@ Cost split (Kostenverteilung): the set of per-person personal contribution value
 ✔ Monthly budget calculation
 ✔ Summary display:
 
-* Total income
+* Total household income
 * Expenses grouped by category
-* Total expenses
-* Net result
+* Total household expenditure
+* Household budget balance
 * Kostenverteilung (cost split) based on shared expenses and personal budgets
 
 ### Out of Scope (for now)
@@ -206,14 +206,14 @@ Group by `category_id`, sum monthly values.
 
 Sum of all expense category totals (absolute basis).
 
-#### Net Result
+#### Household Budget Balance
 
 ```
-net = totalIncome - totalExpenses
+balance = totalHouseholdIncome - totalHouseholdExpenditure
 ```
 
-Net > 0 → surplus
-Net < 0 → deficit
+Balance > 0 → surplus
+Balance < 0 → deficit
 
 #### Per-Person Totals
 
@@ -225,7 +225,7 @@ Goal: everyone contributes a fair share to shared expenses and ends up with the 
 
 Definitions:
 - `personalRetentionValue = personalExpenses`
-- `budgetPerPerson` = netResultShared / numberOfPersons
+- `budgetPerPerson` = sharedHouseholdBudgetBalanceWithoutOneTimeIncome / numberOfPersons
 - `personalUsableIncome = personalIncome - personalRetentionValue`
 - `personalCostShare = personalIncome - budgetPerPerson`
 
@@ -281,11 +281,11 @@ Response example:
 
 ```json
 {
-  "totalIncome": 4200,
-  "totalIncomeRecurring": 4200,
-  "totalExpenses": 2900,
-  "netResult": 1300,
-  "netResultShared": 4200,
+  "totalHouseholdIncome": 4200,
+  "totalHouseholdIncomeRecurring": 4200,
+  "totalHouseholdExpenditure": 2900,
+  "householdBudgetBalance": 1300,
+  "sharedHouseholdBudgetBalanceWithoutOneTimeIncome": 4200,
   "expensesByCategory": [
     { "categoryName": "Rent", "monthlyAmount": 1200 }
   ],
@@ -296,8 +296,8 @@ Response example:
   "expensesByBudgetItem": [],
   "incomeByPerson": [],
   "expensesByPerson": [],
-  "sharedIncomeTotal": 0,
-  "sharedExpenseTotal": 0,
+  "sharedHouseholdIncomeTotal": 0,
+  "sharedHouseholdExpenditureTotal": 0,
   "budgetPerPerson": 0,
   "costSplit": []
 }
@@ -312,7 +312,7 @@ Response example:
 
 #### Overview
 
-Shows the monthly summary (income, expenses, net result) and grouped lists:
+Shows the monthly summary (household income, household expenditure, household budget balance) and grouped lists:
 * Income grouped by person
 * Expenses grouped by category and person
 
@@ -395,7 +395,7 @@ docker-compose up
 ✔ Users can create recurring budget items
 ✔ API returns correct monthly summary
 ✔ Expenses grouped by category
-✔ Net result displayed
+✔ Household budget balance displayed
 ✔ docker-compose launches full stack
 ✔ PostgreSQL persists data
 

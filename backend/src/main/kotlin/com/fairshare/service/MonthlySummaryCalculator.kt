@@ -26,12 +26,11 @@ class MonthlySummaryCalculator(
         expenseItems: List<BudgetItem>,
         persons: List<Person>,
     ): MonthlySummaryResponse {
-        val totalIncome = sumMonthlyAmounts(incomeItems)
-        val totalIncomeRecurring =
-            incomeItems
-                .filter { !(it.frequency == Frequency.ONE_TIME && !it.planned) }
-                .let { sumMonthlyAmounts(it) }
-        val totalExpenses = sumMonthlyAmounts(expenseItems)
+        val totalHouseholdIncome = sumMonthlyAmounts(incomeItems)
+        val totalHouseholdIncomeRecurring = incomeItems
+            .filter { !(it.frequency == Frequency.ONE_TIME && !it.planned) }
+            .let { sumMonthlyAmounts(it) }
+        val totalHouseholdExpenditure = sumMonthlyAmounts(expenseItems)
 
         val incomeByPerson =
             incomeItems
@@ -107,14 +106,12 @@ class MonthlySummaryCalculator(
                     )
                 }.sortedBy { it.categoryName.lowercase() }
 
-        val sharedIncomeTotal =
-            incomeByBudgetItem
-                .filter { it.personId == null }
-                .fold(BigDecimal.ZERO) { acc, item -> acc.add(item.monthlyAmount) }
-        val sharedExpenseTotal =
-            expensesByBudgetItem
-                .filter { it.personId == null }
-                .fold(BigDecimal.ZERO) { acc, item -> acc.add(item.monthlyAmount) }
+        val sharedHouseholdIncomeTotal = incomeByBudgetItem
+            .filter { it.personId == null }
+            .fold(BigDecimal.ZERO) { acc, item -> acc.add(item.monthlyAmount) }
+        val sharedHouseholdExpenditureTotal = expensesByBudgetItem
+            .filter { it.personId == null }
+            .fold(BigDecimal.ZERO) { acc, item -> acc.add(item.monthlyAmount) }
 
         val personalIncomeTotals =
             incomeByBudgetItem
@@ -128,31 +125,32 @@ class MonthlySummaryCalculator(
                 .groupBy { it.personId }
                 .mapValues { (_, items) -> items.fold(BigDecimal.ZERO) { acc, item -> acc.add(item.monthlyAmount) } }
 
-        val netResultShared = totalIncomeRecurring.subtract(sharedExpenseTotal)
-        val costSplitResult =
-            costSplitCalculator.calculate(
-                persons = persons,
-                personalIncomeTotals = personalIncomeTotals,
-                personalExpenseTotals = personalExpenseTotals,
-                sharedIncomeTotal = sharedIncomeTotal,
-                sharedExpenseTotal = sharedExpenseTotal,
-                netResultShared = netResultShared,
-            )
+        val sharedHouseholdBudgetBalanceWithoutOneTimeIncome = totalHouseholdIncomeRecurring.subtract(
+            sharedHouseholdExpenditureTotal
+        )
+        val costSplitResult = costSplitCalculator.calculate(
+            persons = persons,
+            personalIncomeTotals = personalIncomeTotals,
+            personalExpenseTotals = personalExpenseTotals,
+            sharedHouseholdIncomeTotal = sharedHouseholdIncomeTotal,
+            sharedHouseholdExpenditureTotal = sharedHouseholdExpenditureTotal,
+            sharedHouseholdBudgetBalanceWithoutOneTimeIncome = sharedHouseholdBudgetBalanceWithoutOneTimeIncome
+        )
 
         return MonthlySummaryResponse(
-            totalIncome = totalIncome,
-            totalIncomeRecurring = totalIncomeRecurring,
-            totalExpenses = totalExpenses,
-            netResult = totalIncome.subtract(totalExpenses),
-            netResultShared = netResultShared,
+            totalHouseholdIncome = totalHouseholdIncome,
+            totalHouseholdIncomeRecurring = totalHouseholdIncomeRecurring,
+            totalHouseholdExpenditure = totalHouseholdExpenditure,
+            householdBudgetBalance = totalHouseholdIncome.subtract(totalHouseholdExpenditure),
+            sharedHouseholdBudgetBalanceWithoutOneTimeIncome = sharedHouseholdBudgetBalanceWithoutOneTimeIncome,
             expensesByCategory = expensesByCategory,
             incomeByCategory = incomeByCategory,
             incomeByBudgetItem = incomeByBudgetItem,
             incomeByPerson = incomeByPerson,
             expensesByPerson = expensesByPerson,
             expensesByBudgetItem = expensesByBudgetItem,
-            sharedIncomeTotal = costSplitResult.sharedIncomeTotal,
-            sharedExpenseTotal = costSplitResult.sharedExpenseTotal,
+            sharedHouseholdIncomeTotal = costSplitResult.sharedHouseholdIncomeTotal,
+            sharedHouseholdExpenditureTotal = costSplitResult.sharedHouseholdExpenditureTotal,
             budgetPerPerson = costSplitResult.budgetPerPerson,
             costSplit = costSplitResult.costSplit,
         )

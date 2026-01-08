@@ -48,19 +48,19 @@ class BudgetServiceTest {
         val expenseItems = listOf(BudgetItem(id = 2, name = "Rent", type = BudgetItemType.EXPENSE, amount = BigDecimal.ONE, category = Category(2, "cat", BudgetItemType.EXPENSE, 2), startDate = LocalDate.now()))
         val persons = listOf(Person(1, "Person 1"))
         val expectedResponse = MonthlySummaryResponse(
-            totalIncome = BigDecimal.TEN,
-            totalIncomeRecurring = BigDecimal.TEN,
-            totalExpenses = BigDecimal.ONE,
-            netResult = BigDecimal.TEN,
-            netResultShared = BigDecimal.ZERO,
+            totalHouseholdIncome = BigDecimal.TEN,
+            totalHouseholdIncomeRecurring = BigDecimal.TEN,
+            totalHouseholdExpenditure = BigDecimal.ONE,
+            householdBudgetBalance = BigDecimal.TEN.subtract(BigDecimal.ONE),
+            sharedHouseholdBudgetBalanceWithoutOneTimeIncome = BigDecimal.ZERO,
             expensesByCategory = emptyList(),
             incomeByCategory = emptyList(),
             incomeByBudgetItem = emptyList(),
             incomeByPerson = emptyList(),
             expensesByPerson = emptyList(),
             expensesByBudgetItem = emptyList(),
-            sharedIncomeTotal = BigDecimal.ZERO,
-            sharedExpenseTotal = BigDecimal.ZERO,
+            sharedHouseholdIncomeTotal = BigDecimal.ZERO,
+            sharedHouseholdExpenditureTotal = BigDecimal.ZERO,
             budgetPerPerson = BigDecimal.ZERO,
             costSplit = emptyList()
         )

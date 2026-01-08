@@ -32,10 +32,10 @@ SPDX-License-Identifier: GPL-3.0-only
           </div>
         </div>
       </div>
-      <div class="d-flex align-center justify-space-between font-weight-bold">
-        <span>Gesamteinkommen</span>
-        <span>{{ formatCurrency(summary?.totalIncome) }}</span>
-      </div>
+        <div class="d-flex align-center justify-space-between font-weight-bold">
+          <span>Gesamthaushaltseinkommen</span>
+          <span>{{ formatCurrency(summary?.totalHouseholdIncome) }}</span>
+        </div>
     </template>
     <v-list-item v-else>
       <v-list-item-title>Füge Einnahmen hinzu, um diese Liste zu füllen.</v-list-item-title>

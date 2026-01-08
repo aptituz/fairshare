@@ -30,27 +30,28 @@ class CostSplitCalculatorTest {
             1L to BigDecimal("500.00"), // Alice's expenses
             2L to BigDecimal("800.00")  // Bob's expenses
         )
-        val sharedIncomeTotal = BigDecimal("1000.00")
-        val sharedExpenseTotal = BigDecimal("1200.00")
+        val sharedHouseholdIncomeTotal = BigDecimal("1000.00")
+        val sharedHouseholdExpenditureTotal = BigDecimal("1200.00")
         // Net result of shared items is 1000 - 1200 = -200
-        val netResultShared = sharedIncomeTotal.subtract(sharedExpenseTotal)
+        val sharedHouseholdBudgetBalanceWithoutOneTimeIncome = sharedHouseholdIncomeTotal
+            .subtract(sharedHouseholdExpenditureTotal)
 
         // ACT
         val result = costSplitCalculator.calculate(
             persons = persons,
             personalIncomeTotals = personalIncomeTotals,
             personalExpenseTotals = personalExpenseTotals,
-            sharedIncomeTotal = sharedIncomeTotal,
-            sharedExpenseTotal = sharedExpenseTotal,
-            netResultShared = netResultShared
+            sharedHouseholdIncomeTotal = sharedHouseholdIncomeTotal,
+            sharedHouseholdExpenditureTotal = sharedHouseholdExpenditureTotal,
+            sharedHouseholdBudgetBalanceWithoutOneTimeIncome = sharedHouseholdBudgetBalanceWithoutOneTimeIncome
         )
 
         // ASSERT
         // 1. Overall Budget & Shared Totals
         // The shared deficit is -200. Split between 2 people, so each should cover -100.
         assertEquals(0, result.budgetPerPerson.compareTo(BigDecimal("-100.00")))
-        assertEquals(0, result.sharedIncomeTotal.compareTo(sharedIncomeTotal))
-        assertEquals(0, result.sharedExpenseTotal.compareTo(sharedExpenseTotal))
+        assertEquals(0, result.sharedHouseholdIncomeTotal.compareTo(sharedHouseholdIncomeTotal))
+        assertEquals(0, result.sharedHouseholdExpenditureTotal.compareTo(sharedHouseholdExpenditureTotal))
 
 
         // 2. Individual Splits (Alice and Bob)

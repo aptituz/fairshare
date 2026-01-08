@@ -7,25 +7,25 @@ SPDX-License-Identifier: GPL-3.0-only
   <v-row>
     <v-col cols="12">
       <v-card variant="tonal">
-        <v-card-title class="text-subtitle-1">Einnahmen</v-card-title>
+        <v-card-title class="text-subtitle-1">Haushaltseinkommen</v-card-title>
         <v-card-text class="text-h6">
-          {{ formatCurrency(summary?.totalIncome) }}
+          {{ formatCurrency(summary?.totalHouseholdIncome) }}
         </v-card-text>
       </v-card>
     </v-col>
     <v-col cols="12">
       <v-card variant="tonal">
-        <v-card-title class="text-subtitle-1">Ausgaben</v-card-title>
+        <v-card-title class="text-subtitle-1">Haushaltsausgaben</v-card-title>
         <v-card-text class="text-h6">
-          {{ formatCurrency(summary?.totalExpenses) }}
+          {{ formatCurrency(summary?.totalHouseholdExpenditure) }}
         </v-card-text>
       </v-card>
     </v-col>
     <v-col cols="12">
       <v-card color="secondary" variant="tonal">
-        <v-card-title class="text-subtitle-1">Saldo</v-card-title>
+        <v-card-title class="text-subtitle-1">Haushaltssaldo</v-card-title>
         <v-card-text class="text-h6">
-          {{ formatCurrency(summary?.netResult) }}
+          {{ formatCurrency(summary?.householdBudgetBalance) }}
         </v-card-text>
       </v-card>
     </v-col>

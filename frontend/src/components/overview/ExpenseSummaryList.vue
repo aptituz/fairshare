@@ -53,8 +53,8 @@ SPDX-License-Identifier: GPL-3.0-only
         </div>
       </div>
       <div class="d-flex align-center justify-space-between font-weight-bold">
-        <span>Gesamtausgaben</span>
-        <span>{{ formatCurrency(summary?.totalExpenses) }}</span>
+        <span>Gesamthaushaltsausgaben</span>
+        <span>{{ formatCurrency(summary?.totalHouseholdExpenditure) }}</span>
       </div>
     </template>
     <div v-else>Füge Ausgaben hinzu, um diese Liste zu füllen.</div>
