@@ -70,6 +70,12 @@ SPDX-License-Identifier: GPL-3.0-only
                         Bearbeiten
                       </v-list-item-title>
                     </v-list-item>
+                    <v-list-item @click="openChangeDialog(budgetItem)">
+                      <v-list-item-title class="d-flex align-center ga-2">
+                        <v-icon icon="mdi-swap-horizontal" size="small" />
+                        Betrag aendern
+                      </v-list-item-title>
+                    </v-list-item>
                     <v-list-item
                       v-if="canSuspend && !budgetItem.suspendedForMonth"
                       @click="openSuspendDialog(budgetItem)"
@@ -137,6 +143,12 @@ SPDX-License-Identifier: GPL-3.0-only
                     <v-list-item-title class="d-flex align-center ga-2">
                       <v-icon icon="mdi-pencil" size="small" />
                       Bearbeiten
+                    </v-list-item-title>
+                  </v-list-item>
+                  <v-list-item @click="openChangeDialog(budgetItem)">
+                    <v-list-item-title class="d-flex align-center ga-2">
+                      <v-icon icon="mdi-swap-horizontal" size="small" />
+                      Betrag aendern
                     </v-list-item-title>
                   </v-list-item>
                   <v-list-item
@@ -302,6 +314,43 @@ SPDX-License-Identifier: GPL-3.0-only
           <v-spacer />
           <v-btn variant="text" @click="suspendDialogOpen = false">Abbrechen</v-btn>
           <v-btn color="primary" @click="submitSuspend">Aussetzen</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+    <v-dialog v-model="changeDialogOpen" max-width="520">
+      <v-card>
+        <v-card-title>Betrag aendern</v-card-title>
+        <v-card-text>
+          <div class="d-flex flex-column ga-2">
+            <v-text-field
+              v-model="changeAmount"
+              label="Neuer Betrag"
+              type="number"
+              step="0.01"
+              min="0"
+              density="compact"
+              hide-details
+            />
+            <div class="text-caption">Gueltig ab</div>
+            <MonthYearPicker
+              :model-value="changeStartMonth"
+              :year-range="20"
+              @update:modelValue="(value) => (changeStartMonth = value)"
+            />
+            <div class="text-caption">Gueltig bis (optional)</div>
+            <MonthYearPicker
+              :model-value="changeEndMonth"
+              :year-range="20"
+              :allow-empty="true"
+              :clearable="true"
+              @update:modelValue="(value) => (changeEndMonth = value)"
+            />
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="changeDialogOpen = false">Abbrechen</v-btn>
+          <v-btn color="primary" @click="submitChange">Speichern</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -575,6 +624,7 @@ const props = defineProps({
   onUpdateBudgetItem: { type: Function, required: true },
   onDeleteBudgetItem: { type: Function, required: true },
   onOverrideBudgetItemForMonth: { type: Function, required: true },
+  onChangeBudgetItemValue: { type: Function, required: true },
   onSuspendBudgetItem: { type: Function, required: true },
   onResumeBudgetItem: { type: Function, required: true },
   onFetchBudgetItemHistory: { type: Function, required: true },
@@ -612,6 +662,11 @@ const suspendDialogOpen = ref(false);
 const suspendItemId = ref(null);
 const suspendStartMonth = ref(props.summaryMonth);
 const suspendEndMonth = ref("");
+const changeDialogOpen = ref(false);
+const changeItemId = ref(null);
+const changeAmount = ref("");
+const changeStartMonth = ref(props.summaryMonth);
+const changeEndMonth = ref("");
 const resumeDialogOpen = ref(false);
 const resumeItemId = ref(null);
 const resumeStartMonth = ref(props.summaryMonth);
@@ -975,6 +1030,14 @@ const openResumeDialog = (budgetItem) => {
   resumeDialogOpen.value = true;
 };
 
+const openChangeDialog = (budgetItem) => {
+  changeItemId.value = budgetItem.id;
+  changeAmount.value = budgetItem.amount;
+  changeStartMonth.value = props.summaryMonth;
+  changeEndMonth.value = "";
+  changeDialogOpen.value = true;
+};
+
 const fetchHistory = async (sourceId) => {
   historyLoading.value = true;
   const items = await props.onFetchBudgetItemHistory(sourceId);
@@ -1054,6 +1117,25 @@ const submitSuspend = async () => {
     suspendItemId.value = null;
     suspendStartMonth.value = props.summaryMonth;
     suspendEndMonth.value = "";
+  }
+};
+
+const submitChange = async () => {
+  if (!changeItemId.value) {
+    return;
+  }
+  const success = await props.onChangeBudgetItemValue(
+    changeItemId.value,
+    changeAmount.value,
+    changeStartMonth.value,
+    changeEndMonth.value || null
+  );
+  if (success) {
+    changeDialogOpen.value = false;
+    changeItemId.value = null;
+    changeAmount.value = "";
+    changeStartMonth.value = props.summaryMonth;
+    changeEndMonth.value = "";
   }
 };
 

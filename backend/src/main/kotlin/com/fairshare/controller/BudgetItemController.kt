@@ -10,6 +10,7 @@ import com.fairshare.dto.BudgetItemHistoryEntryResponse
 import com.fairshare.dto.BudgetItemResponse
 import com.fairshare.dto.CategoryCorrectionRequest
 import com.fairshare.dto.CreateBudgetItemRequest
+import com.fairshare.dto.BudgetItemValueChangeRequest
 import com.fairshare.dto.ResumeBudgetItemRequest
 import com.fairshare.dto.SuspendBudgetItemRequest
 import com.fairshare.dto.UpdateBudgetItemRequest
@@ -67,6 +68,13 @@ class BudgetItemController(
         @PathVariable id: Long,
         @RequestBody request: BudgetItemOverrideRequest,
     ): BudgetItemResponse = budgetItemService.overrideForMonth(id, request)
+
+    @PostMapping("/{id}/value-change")
+    @Operation(summary = "Change a budget item value for a specific period")
+    fun changeValue(
+        @PathVariable id: Long,
+        @RequestBody request: BudgetItemValueChangeRequest,
+    ): BudgetItemResponse = budgetItemService.changeValueForPeriod(id, request)
 
     @PostMapping("/{id}/suspend")
     @Operation(summary = "Suspend a budget item for a specific period")

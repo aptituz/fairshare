@@ -8,6 +8,7 @@ package com.fairshare.service
 import com.fairshare.dto.BudgetItemOverrideRequest
 import com.fairshare.dto.BudgetItemHistoryEntryResponse
 import com.fairshare.dto.BudgetItemResponse
+import com.fairshare.dto.BudgetItemValueChangeRequest
 import com.fairshare.dto.CategoryCorrectionRequest
 import com.fairshare.dto.CreateBudgetItemRequest
 import com.fairshare.dto.ResumeBudgetItemRequest
@@ -299,6 +300,111 @@ class BudgetItemService(
             )
 
         return overrideItem.toResponse()
+    }
+
+    fun changeValueForPeriod(
+        id: Long,
+        request: BudgetItemValueChangeRequest,
+    ): BudgetItemResponse {
+        val budgetItem =
+            budgetItemRepository.findById(id).orElseThrow {
+                NotFoundException("Budget item $id not found")
+            }
+        val startMonth = parseYearMonth(request.startMonth)
+        val startDate = startMonth.atDay(1)
+        val endDate = request.endMonth?.let { parseYearMonth(it).atEndOfMonth() }
+        if (endDate != null && endDate.isBefore(startDate)) {
+            throw BadRequestException("End month must be after start month")
+        }
+        val originalEnd = budgetItem.endDate
+        if (startDate.isBefore(budgetItem.startDate)) {
+            throw BadRequestException("Change start must be within the item range")
+        }
+        if (originalEnd != null && startDate.isAfter(originalEnd)) {
+            throw BadRequestException("Change start must be within the item range")
+        }
+        if (endDate != null && originalEnd != null && endDate.isAfter(originalEnd)) {
+            throw BadRequestException("Change end must be within the item range")
+        }
+
+        val hasBefore = budgetItem.startDate.isBefore(startDate)
+        val hasAfter =
+            if (endDate == null) {
+                false
+            } else {
+                originalEnd == null || originalEnd.isAfter(endDate)
+            }
+        val newEndDate = endDate ?: originalEnd
+        val originalAmount = budgetItem.amount
+        val originalFrequency = budgetItem.frequency
+
+        if (!hasBefore) {
+            budgetItem.amount = request.amount
+            budgetItem.startDate = startDate
+            budgetItem.endDate = newEndDate
+            val saved = budgetItemRepository.save(budgetItem)
+            if (hasAfter && newEndDate != null) {
+                budgetItemRepository.save(
+                    BudgetItem(
+                        name = budgetItem.name,
+                        amount = originalAmount,
+                        type = budgetItem.type,
+                        frequency = originalFrequency,
+                        planned = budgetItem.planned,
+                        categoryCorrection = false,
+                        startDate = newEndDate.plusDays(1),
+                        endDate = originalEnd,
+                        category = budgetItem.category,
+                        person = budgetItem.person,
+                        previousBudgetItem = budgetItem,
+                        rootBudgetItem = resolveRootBudgetItem(budgetItem),
+                    ),
+                )
+            }
+            return saved.toResponse()
+        }
+
+        budgetItem.endDate = startDate.minusDays(1)
+        budgetItemRepository.save(budgetItem)
+
+        val changedItem =
+            budgetItemRepository.save(
+                BudgetItem(
+                    name = budgetItem.name,
+                    amount = request.amount,
+                    type = budgetItem.type,
+                    frequency = budgetItem.frequency,
+                    planned = budgetItem.planned,
+                    categoryCorrection = false,
+                    startDate = startDate,
+                    endDate = newEndDate,
+                    category = budgetItem.category,
+                    person = budgetItem.person,
+                    previousBudgetItem = budgetItem,
+                    rootBudgetItem = resolveRootBudgetItem(budgetItem),
+                ),
+            )
+
+        if (hasAfter && newEndDate != null) {
+            budgetItemRepository.save(
+                BudgetItem(
+                    name = budgetItem.name,
+                    amount = originalAmount,
+                    type = budgetItem.type,
+                    frequency = originalFrequency,
+                    planned = budgetItem.planned,
+                    categoryCorrection = false,
+                    startDate = newEndDate.plusDays(1),
+                    endDate = originalEnd,
+                    category = budgetItem.category,
+                    person = budgetItem.person,
+                    previousBudgetItem = changedItem,
+                    rootBudgetItem = resolveRootBudgetItem(budgetItem),
+                ),
+            )
+        }
+
+        return changedItem.toResponse()
     }
 
     fun suspendExpense(

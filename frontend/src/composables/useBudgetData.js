@@ -369,6 +369,35 @@ export const useBudgetData = () => {
     }
   };
 
+  const changeBudgetItemValue = async (id, amount, startMonth, endMonth) => {
+    const numericAmount = Number(amount);
+    if (Number.isNaN(numericAmount)) {
+      error.value = "Bitte einen gueltigen Betrag angeben.";
+      return false;
+    }
+    if (!startMonth) {
+      error.value = "Bitte einen gueltigen Startmonat waehlen.";
+      return false;
+    }
+    error.value = "";
+    try {
+      await request(`/api/budget-items/${id}/value-change`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: numericAmount,
+          startMonth,
+          endMonth: endMonth || null
+        })
+      });
+      await refreshAll();
+      return true;
+    } catch (err) {
+      error.value = err?.message || "Wert konnte nicht angepasst werden.";
+      return false;
+    }
+  };
+
   const suspendBudgetItem = async (id, startMonth, endMonth) => {
     if (!startMonth) {
       error.value = "Bitte einen gueltigen Startmonat waehlen.";
@@ -529,6 +558,7 @@ export const useBudgetData = () => {
     updateBudgetItem,
     deleteBudgetItem,
     overrideBudgetItemForMonth,
+    changeBudgetItemValue,
     suspendBudgetItem,
     resumeBudgetItem,
     fetchBudgetItemHistory,

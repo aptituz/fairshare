@@ -46,6 +46,7 @@ SPDX-License-Identifier: GPL-3.0-only
       :updateBudgetItem="updateBudgetItem"
       :deleteBudgetItem="deleteBudgetItem"
       :overrideBudgetItemForMonth="overrideBudgetItemForMonth"
+      :changeBudgetItemValue="changeBudgetItemValue"
       :suspendBudgetItem="suspendBudgetItem"
       :resumeBudgetItem="resumeBudgetItem"
       :fetchBudgetItemHistory="fetchBudgetItemHistory"
@@ -103,6 +104,7 @@ const {
   updateBudgetItem,
   deleteBudgetItem,
   overrideBudgetItemForMonth,
+  changeBudgetItemValue,
   suspendBudgetItem,
   resumeBudgetItem,
   fetchBudgetItemHistory,

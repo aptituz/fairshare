@@ -30,6 +30,7 @@ SPDX-License-Identifier: GPL-3.0-only
         :onUpdateBudgetItem="updateBudgetItem"
         :onDeleteBudgetItem="deleteBudgetItem"
         :onOverrideBudgetItemForMonth="overrideBudgetItemForMonth"
+        :onChangeBudgetItemValue="changeBudgetItemValue"
         :onSuspendBudgetItem="suspendBudgetItem"
         :onResumeBudgetItem="resumeBudgetItem"
         :onFetchBudgetItemHistory="fetchBudgetItemHistory"
@@ -62,6 +63,7 @@ const props = defineProps({
   updateBudgetItem: { type: Function, required: true },
   deleteBudgetItem: { type: Function, required: true },
   overrideBudgetItemForMonth: { type: Function, required: true },
+  changeBudgetItemValue: { type: Function, required: true },
   suspendBudgetItem: { type: Function, required: true },
   resumeBudgetItem: { type: Function, required: true },
   fetchBudgetItemHistory: { type: Function, required: true },
