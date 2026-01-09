@@ -6,16 +6,22 @@
 package com.fairshare.service
 
 import com.fairshare.dto.BudgetItemOverrideRequest
+import com.fairshare.dto.BudgetItemValueChangeRequest
 import com.fairshare.dto.CategoryCorrectionRequest
 import com.fairshare.dto.CreateBudgetItemRequest
+import com.fairshare.dto.ResumeBudgetItemRequest
+import com.fairshare.dto.SuspendBudgetItemRequest
 import com.fairshare.dto.UpdateBudgetItemRequest
 import com.fairshare.exception.BadRequestException
 import com.fairshare.exception.NotFoundException
 import com.fairshare.model.BudgetItem
 import com.fairshare.model.BudgetItemType
+import com.fairshare.model.BudgetItemSuspension
 import com.fairshare.model.Category
+import com.fairshare.model.Frequency
 import com.fairshare.model.Person
 import com.fairshare.repo.BudgetItemRepository
+import com.fairshare.repo.BudgetItemSuspensionRepository
 import com.fairshare.repo.CategoryRepository
 import com.fairshare.repo.PersonRepository
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -23,8 +29,12 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.eq
+import org.mockito.ArgumentCaptor
 import org.mockito.InjectMocks
 import org.mockito.Mock
+import org.mockito.Mockito.never
+import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
 import java.math.BigDecimal
@@ -35,6 +45,9 @@ class BudgetItemServiceTest {
 
     @Mock
     lateinit var budgetItemRepository: BudgetItemRepository
+
+    @Mock
+    lateinit var budgetItemSuspensionRepository: BudgetItemSuspensionRepository
 
     @Mock
     lateinit var categoryRepository: CategoryRepository
@@ -55,7 +68,7 @@ class BudgetItemServiceTest {
         `when`(budgetItemRepository.findAll()).thenReturn(budgetItems)
 
         // when
-        val result = budgetItemService.list(null)
+        val result = budgetItemService.list(null, null)
 
         // then
         assertEquals(2, result.size)
@@ -70,7 +83,7 @@ class BudgetItemServiceTest {
         `when`(budgetItemRepository.findByType(BudgetItemType.INCOME)).thenReturn(budgetItems)
 
         // when
-        val result = budgetItemService.list(BudgetItemType.INCOME)
+        val result = budgetItemService.list(BudgetItemType.INCOME, null)
 
         // then
         assertEquals(1, result.size)
@@ -246,5 +259,158 @@ class BudgetItemServiceTest {
 
         // then
         assertEquals(BigDecimal("50"), result?.amount)
+    }
+
+    @Test
+    fun `list should mark suspended items for a month`() {
+        val month = "2025-02"
+        val monthStart = LocalDate.of(2025, 2, 1)
+        val monthEnd = LocalDate.of(2025, 2, 28)
+        val item = BudgetItem(
+            id = 10,
+            name = "Rent",
+            amount = BigDecimal("800"),
+            type = BudgetItemType.EXPENSE,
+            startDate = LocalDate.of(2025, 1, 1)
+        )
+        val suspension = BudgetItemSuspension(
+            id = 5,
+            budgetItem = item,
+            startDate = LocalDate.of(2025, 2, 1),
+            endDate = null
+        )
+        `when`(budgetItemRepository.findEffectiveForMonth(BudgetItemType.EXPENSE, monthStart, monthEnd))
+            .thenReturn(listOf(item))
+        `when`(budgetItemSuspensionRepository.findActiveForItemsAndMonth(listOf(10L), monthStart, monthEnd))
+            .thenReturn(listOf(suspension))
+
+        val result = budgetItemService.list(BudgetItemType.EXPENSE, month)
+
+        assertEquals(1, result.size)
+        assertEquals(BigDecimal.ZERO, result[0].amount)
+        assertEquals(BigDecimal.ZERO, result[0].monthlyAmount)
+        assertEquals(true, result[0].suspendedForMonth)
+    }
+
+    @Test
+    fun `suspendExpense should create a suspension entry`() {
+        val item = BudgetItem(
+            id = 7,
+            name = "Rent",
+            amount = BigDecimal("800"),
+            type = BudgetItemType.EXPENSE,
+            startDate = LocalDate.of(2025, 1, 1),
+            endDate = LocalDate.of(2025, 12, 31)
+        )
+        val request = SuspendBudgetItemRequest(startMonth = "2025-05", endMonth = "2025-06")
+        `when`(budgetItemRepository.findById(7)).thenReturn(java.util.Optional.of(item))
+        `when`(budgetItemSuspensionRepository.existsOverlapping(eq(7L), eq(LocalDate.of(2025, 5, 1)), eq(LocalDate.of(2025, 6, 30))))
+            .thenReturn(false)
+        `when`(budgetItemSuspensionRepository.save(any(BudgetItemSuspension::class.java)))
+            .thenAnswer { it.arguments[0] as BudgetItemSuspension }
+
+        val result = budgetItemService.suspendExpense(7, request)
+
+        assertEquals(7L, result.id)
+        verify(budgetItemSuspensionRepository).save(any(BudgetItemSuspension::class.java))
+        verify(budgetItemRepository, never()).save(any(BudgetItem::class.java))
+    }
+
+    @Test
+    fun `resumeSuspendedExpense should delete suspension when resume starts at suspension start`() {
+        val item = BudgetItem(
+            id = 7,
+            name = "Rent",
+            amount = BigDecimal("800"),
+            type = BudgetItemType.EXPENSE,
+            startDate = LocalDate.of(2025, 1, 1)
+        )
+        val suspension = BudgetItemSuspension(
+            id = 11,
+            budgetItem = item,
+            startDate = LocalDate.of(2025, 6, 1),
+            endDate = LocalDate.of(2025, 8, 31)
+        )
+        val request = ResumeBudgetItemRequest(startMonth = "2025-06")
+        `when`(budgetItemRepository.findById(7)).thenReturn(java.util.Optional.of(item))
+        `when`(
+            budgetItemSuspensionRepository.findActiveForItemAndMonth(
+                7L,
+                LocalDate.of(2025, 6, 1),
+                LocalDate.of(2025, 6, 30)
+            )
+        ).thenReturn(listOf(suspension))
+
+        budgetItemService.resumeSuspendedExpense(7, request)
+
+        verify(budgetItemSuspensionRepository).delete(suspension)
+    }
+
+    @Test
+    fun `resumeSuspendedExpense should shorten suspension when resume starts later`() {
+        val item = BudgetItem(
+            id = 7,
+            name = "Rent",
+            amount = BigDecimal("800"),
+            type = BudgetItemType.EXPENSE,
+            startDate = LocalDate.of(2025, 1, 1)
+        )
+        val suspension = BudgetItemSuspension(
+            id = 11,
+            budgetItem = item,
+            startDate = LocalDate.of(2025, 6, 1),
+            endDate = LocalDate.of(2025, 8, 31)
+        )
+        val request = ResumeBudgetItemRequest(startMonth = "2025-07")
+        `when`(budgetItemRepository.findById(7)).thenReturn(java.util.Optional.of(item))
+        `when`(
+            budgetItemSuspensionRepository.findActiveForItemAndMonth(
+                7L,
+                LocalDate.of(2025, 7, 1),
+                LocalDate.of(2025, 7, 31)
+            )
+        ).thenReturn(listOf(suspension))
+        `when`(budgetItemSuspensionRepository.save(any(BudgetItemSuspension::class.java)))
+            .thenAnswer { it.arguments[0] as BudgetItemSuspension }
+
+        budgetItemService.resumeSuspendedExpense(7, request)
+
+        val captor = ArgumentCaptor.forClass(BudgetItemSuspension::class.java)
+        verify(budgetItemSuspensionRepository).save(captor.capture())
+        assertEquals(LocalDate.of(2025, 6, 30), captor.value.endDate)
+    }
+
+    @Test
+    fun `changeValueForPeriod should split item before and after`() {
+        val item = BudgetItem(
+            id = 4,
+            name = "Rent",
+            amount = BigDecimal("800"),
+            type = BudgetItemType.EXPENSE,
+            frequency = Frequency.MONTHLY,
+            startDate = LocalDate.of(2024, 1, 1),
+            endDate = LocalDate.of(2025, 12, 31)
+        )
+        val request = BudgetItemValueChangeRequest(
+            amount = BigDecimal("950"),
+            startMonth = "2025-06",
+            endMonth = "2025-08"
+        )
+        `when`(budgetItemRepository.findById(4)).thenReturn(java.util.Optional.of(item))
+        `when`(budgetItemRepository.save(any(BudgetItem::class.java))).thenAnswer { it.arguments[0] as BudgetItem }
+
+        val result = budgetItemService.changeValueForPeriod(4, request)
+
+        assertEquals(BigDecimal("950"), result.amount)
+        val captor = ArgumentCaptor.forClass(BudgetItem::class.java)
+        verify(budgetItemRepository, org.mockito.Mockito.times(3)).save(captor.capture())
+        val saved = captor.allValues
+        val before = saved.first { it.startDate == LocalDate.of(2024, 1, 1) }
+        val changed = saved.first { it.startDate == LocalDate.of(2025, 6, 1) }
+        val after = saved.first { it.startDate == LocalDate.of(2025, 9, 1) }
+        assertEquals(LocalDate.of(2025, 5, 31), before.endDate)
+        assertEquals(LocalDate.of(2025, 8, 31), changed.endDate)
+        assertEquals(BigDecimal("800"), after.amount)
+        assertEquals(LocalDate.of(2025, 12, 31), after.endDate)
     }
 }

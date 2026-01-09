@@ -11,6 +11,7 @@ import com.fairshare.model.BudgetItemType
 import com.fairshare.model.Category
 import com.fairshare.model.Person
 import com.fairshare.repo.BudgetItemRepository
+import com.fairshare.repo.BudgetItemSuspensionRepository
 import com.fairshare.repo.PersonRepository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -28,6 +29,9 @@ class BudgetServiceTest {
 
     @Mock
     lateinit var budgetItemRepository: BudgetItemRepository
+
+    @Mock
+    lateinit var budgetItemSuspensionRepository: BudgetItemSuspensionRepository
 
     @Mock
     lateinit var personRepository: PersonRepository
@@ -66,8 +70,12 @@ class BudgetServiceTest {
         )
 
 
-        `when`(budgetItemRepository.findActiveForMonth(BudgetItemType.INCOME, monthStart, monthEnd)).thenReturn(incomeItems)
-        `when`(budgetItemRepository.findActiveForMonth(BudgetItemType.EXPENSE, monthStart, monthEnd)).thenReturn(expenseItems)
+        `when`(budgetItemRepository.findEffectiveForMonth(BudgetItemType.INCOME, monthStart, monthEnd)).thenReturn(incomeItems)
+        `when`(budgetItemRepository.findEffectiveForMonth(BudgetItemType.EXPENSE, monthStart, monthEnd)).thenReturn(expenseItems)
+        `when`(budgetItemSuspensionRepository.findActiveForItemsAndMonth(listOf(1L), monthStart, monthEnd))
+            .thenReturn(emptyList())
+        `when`(budgetItemSuspensionRepository.findActiveForItemsAndMonth(listOf(2L), monthStart, monthEnd))
+            .thenReturn(emptyList())
         `when`(personRepository.findAll()).thenReturn(persons)
         `when`(monthlySummaryCalculator.calculate(incomeItems, expenseItems, persons)).thenReturn(expectedResponse)
 
