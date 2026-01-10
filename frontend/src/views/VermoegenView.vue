@@ -247,6 +247,15 @@ const chartData = computed(() => {
         backgroundColor: "rgba(30,136,229,0.2)",
         pointRadius: 4,
         tension: 0
+      },
+      {
+        label: "Erwarteter Verlauf",
+        data: summaryData.value.map((entry) => Number(entry.expectedBalance || 0)),
+        borderColor: "#43a047",
+        backgroundColor: "rgba(67,160,71,0.15)",
+        pointRadius: 4,
+        borderDash: [6, 6],
+        tension: 0
       }
     ]
   };
@@ -256,7 +265,7 @@ const chartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
-    legend: { display: false },
+    legend: { display: true },
     tooltip: {
       callbacks: {
         label: (context) => props.formatCurrency(context.parsed.y)

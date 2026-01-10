@@ -98,6 +98,18 @@ export const useBudgetData = () => {
     }
   };
 
+  const fetchYearlySummary = async (year) => {
+    if (!year) {
+      return null;
+    }
+    try {
+      return await request(`/api/budget/yearly-summary?year=${year}`);
+    } catch (err) {
+      error.value = err?.message || "Jahresuebersicht konnte nicht geladen werden.";
+      return null;
+    }
+  };
+
   const deleteSavingsAccountBalance = async (id) => {
     error.value = "";
     try {
@@ -118,6 +130,17 @@ export const useBudgetData = () => {
   const fetchSummary = async () => {
     const query = summaryMonth.value ? `?month=${summaryMonth.value}` : "";
     summary.value = await request(`/api/budget/monthly-summary${query}`);
+  };
+
+  const fetchMonthlySummaryForMonth = async (month) => {
+    error.value = "";
+    try {
+      const query = month ? `?month=${month}` : "";
+      return await request(`/api/budget/monthly-summary${query}`);
+    } catch (err) {
+      error.value = err?.message || "Monatsdaten konnten nicht geladen werden.";
+      return null;
+    }
   };
 
   const refreshAll = async () => {
@@ -731,6 +754,8 @@ export const useBudgetData = () => {
     createSavingsAccountBalance,
     deleteSavingsAccountBalance,
     createSavingsAccountBalancesBulk,
+    fetchYearlySummary,
+    fetchMonthlySummaryForMonth,
     createBudgetItem,
     updateBudgetItem,
     deleteBudgetItem,

@@ -40,6 +40,16 @@ SPDX-License-Identifier: GPL-3.0-only
       :categoryRank="categoryRank"
     />
 
+    <JahresuebersichtView
+      v-else-if="currentView === 'jahresuebersicht'"
+      :summaryMonth="summaryMonth"
+      :fetchYearlySummary="fetchYearlySummary"
+      :fetchMonthlySummaryForMonth="fetchMonthlySummaryForMonth"
+      :categories="categories"
+      :formatCurrency="formatCurrency"
+      :categoryRank="categoryRank"
+    />
+
     <KostenverteilungView
       v-else-if="currentView === 'kostenverteilung'"
       :summary="summary"
@@ -107,6 +117,7 @@ import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import AppShell from "./components/AppShell.vue";
 import OverviewView from "./views/OverviewView.vue";
+import JahresuebersichtView from "./views/JahresuebersichtView.vue";
 import KostenverteilungView from "./views/KostenverteilungView.vue";
 import DatenerfassungView from "./views/DatenerfassungView.vue";
 import StammdatenView from "./views/StammdatenView.vue";
@@ -142,6 +153,8 @@ const {
   createSavingsAccountBalance,
   deleteSavingsAccountBalance,
   createSavingsAccountBalancesBulk,
+  fetchYearlySummary,
+  fetchMonthlySummaryForMonth,
   createBudgetItem,
   updateBudgetItem,
   deleteBudgetItem,
@@ -182,6 +195,9 @@ const router = useRouter();
 const currentView = computed(() => {
   if (route.name === "wealth") {
     return "vermoegen";
+  }
+  if (route.name === "year-overview") {
+    return "jahresuebersicht";
   }
   if (route.name === "cost-split") {
     return "kostenverteilung";
@@ -246,6 +262,10 @@ const handleMonthChange = async (value) => {
 const handleNavigate = ({ view, subView }) => {
   if (view === "kostenverteilung") {
     router.push({ name: "cost-split" });
+    return;
+  }
+  if (view === "jahresuebersicht") {
+    router.push({ name: "year-overview" });
     return;
   }
   if (view === "vermoegen") {

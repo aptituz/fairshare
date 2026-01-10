@@ -6,6 +6,7 @@
 package com.fairshare.controller
 
 import com.fairshare.dto.MonthlySummaryResponse
+import com.fairshare.dto.YearlySummaryResponse
 import com.fairshare.service.BudgetService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -40,5 +41,17 @@ class BudgetController(
                 throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid month format. Use YYYY-MM.")
             }
         return budgetService.monthlySummary(targetMonth)
+    }
+
+    @GetMapping("/yearly-summary")
+    @Transactional(readOnly = true)
+    @Operation(summary = "Get yearly budget summary")
+    fun yearlySummary(
+        @Parameter(description = "Target year", example = "2026")
+        @RequestParam(required = false)
+        year: Int?,
+    ): YearlySummaryResponse {
+        val targetYear = year ?: YearMonth.now().year
+        return budgetService.yearlySummary(targetYear)
     }
 }

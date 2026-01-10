@@ -10,4 +10,5 @@ import java.math.BigDecimal
 data class SavingsAccountBalanceSummaryResponse(
     val month: String,
     val totalBalance: BigDecimal,
+    val expectedBalance: BigDecimal,
 )

@@ -23,6 +23,7 @@ import java.time.YearMonth
 class SavingsAccountBalanceService(
     private val savingsAccountRepository: SavingsAccountRepository,
     private val savingsAccountBalanceRepository: SavingsAccountBalanceRepository,
+    private val budgetService: BudgetService,
 ) {
     fun create(
         accountId: Long,
@@ -121,6 +122,7 @@ class SavingsAccountBalanceService(
             balances.groupBy { it.savingsAccount.id!! }.mapValues { (_, items) ->
                 items.sortedBy { it.balanceDate }
             }
+        val startDate = from.atDay(1).minusDays(1)
 
         val months = mutableListOf<YearMonth>()
         var cursor = from
@@ -128,9 +130,20 @@ class SavingsAccountBalanceService(
             months.add(cursor)
             cursor = cursor.plusMonths(1)
         }
+        val householdBalances =
+            budgetService
+                .monthlyTotals(from, to)
+                .associate { it.month to it.householdBudgetBalance }
 
         val indices = accountIds.associateWith { 0 }.toMutableMap()
         val currentAmounts = accountIds.associateWith { BigDecimal.ZERO }.toMutableMap()
+        val startingTotal =
+            accountIds.fold(BigDecimal.ZERO) { acc, accountId ->
+                val items = balancesByAccount[accountId].orEmpty()
+                val prior = items.lastOrNull { !it.balanceDate.isAfter(startDate) }
+                acc.add(prior?.balanceAmount ?: BigDecimal.ZERO)
+            }
+        var expectedBalance = startingTotal
 
         return months.map { month ->
             val monthEnd = month.atEndOfMonth()
@@ -144,10 +157,13 @@ class SavingsAccountBalanceService(
                 indices[accountId] = index
             }
             val total = currentAmounts.values.fold(BigDecimal.ZERO) { acc, value -> acc.add(value) }
+            val monthlyBalance = householdBalances[month.toString()] ?: BigDecimal.ZERO
             SavingsAccountBalanceSummaryResponse(
                 month = month.toString(),
                 totalBalance = total,
+                expectedBalance = expectedBalance,
             )
+            expectedBalance = expectedBalance.add(monthlyBalance)
         }
     }
 }

@@ -6,6 +6,8 @@
 package com.fairshare.service
 
 import com.fairshare.dto.MonthlySummaryResponse
+import com.fairshare.dto.MonthlyTotalsResponse
+import com.fairshare.dto.YearlySummaryResponse
 import com.fairshare.model.BudgetItemType
 import com.fairshare.repo.BudgetItemRepository
 import com.fairshare.repo.BudgetItemSuspensionRepository
@@ -46,6 +48,50 @@ class BudgetService(
         return monthlySummaryCalculator.calculate(adjustedIncomeItems, adjustedExpenseItems, persons)
     }
 
+    fun yearlySummary(year: Int): YearlySummaryResponse {
+        val from = YearMonth.of(year, 1)
+        val to = YearMonth.of(year, 12)
+        return YearlySummaryResponse(year = year, months = monthlyTotals(from, to))
+    }
+
+    fun monthlyTotals(
+        from: YearMonth,
+        to: YearMonth,
+    ): List<MonthlyTotalsResponse> {
+        val months = mutableListOf<YearMonth>()
+        var cursor = from
+        while (!cursor.isAfter(to)) {
+            months.add(cursor)
+            cursor = cursor.plusMonths(1)
+        }
+        return months.map { month ->
+            val monthStart = month.atDay(1)
+            val monthEnd = month.atEndOfMonth()
+            val incomeItems =
+                budgetItemRepository.findEffectiveForMonth(
+                    BudgetItemType.INCOME,
+                    monthStart,
+                    monthEnd,
+                )
+            val expenseItems =
+                budgetItemRepository.findEffectiveForMonth(
+                    BudgetItemType.EXPENSE,
+                    monthStart,
+                    monthEnd,
+                )
+            val adjustedIncomeItems = applySuspensionsForMonth(incomeItems, monthStart, monthEnd)
+            val adjustedExpenseItems = applySuspensionsForMonth(expenseItems, monthStart, monthEnd)
+            val totalIncome = sumMonthlyAmounts(adjustedIncomeItems)
+            val totalExpense = sumMonthlyAmounts(adjustedExpenseItems)
+            MonthlyTotalsResponse(
+                month = month.toString(),
+                totalHouseholdIncome = totalIncome,
+                totalHouseholdExpenditure = totalExpense,
+                householdBudgetBalance = totalIncome.subtract(totalExpense),
+            )
+        }
+    }
+
     private fun applySuspensionsForMonth(
         items: List<com.fairshare.model.BudgetItem>,
         monthStart: java.time.LocalDate,
@@ -83,4 +129,7 @@ class BudgetService(
             }
         }
     }
+
+    private fun sumMonthlyAmounts(items: List<com.fairshare.model.BudgetItem>): BigDecimal =
+        items.fold(BigDecimal.ZERO) { acc, item -> acc.add(item.monthlyAmount()) }
 }

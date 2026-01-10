@@ -21,6 +21,11 @@ SPDX-License-Identifier: GPL-3.0-only
           @click="navigate('overview')"
         />
         <v-list-item
+          title="Jahresuebersicht"
+          :active="currentView === 'jahresuebersicht'"
+          @click="navigate('jahresuebersicht')"
+        />
+        <v-list-item
           title="Vermoegen"
           :active="currentView === 'vermoegen'"
           @click="navigate('vermoegen')"
