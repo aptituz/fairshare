@@ -30,7 +30,7 @@ dependencies {
 
     developmentOnly("org.springframework.boot:spring-boot-devtools")
 
-    runtimeOnly("org.postgresql:postgresql:42.7.3")
+    runtimeOnly("org.postgresql:postgresql:42.7.8")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
