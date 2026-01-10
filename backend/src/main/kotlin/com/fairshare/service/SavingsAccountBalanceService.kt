@@ -6,6 +6,7 @@
 package com.fairshare.service
 
 import com.fairshare.dto.CreateSavingsAccountBalanceRequest
+import com.fairshare.dto.CreateSavingsAccountBalancesRequest
 import com.fairshare.dto.SavingsAccountBalanceResponse
 import com.fairshare.dto.SavingsAccountBalanceSummaryResponse
 import com.fairshare.exception.BadRequestException
@@ -56,8 +57,54 @@ class SavingsAccountBalanceService(
         return saved.toResponse()
     }
 
+    fun createBulk(request: CreateSavingsAccountBalancesRequest): List<SavingsAccountBalanceResponse> {
+        if (request.balances.isEmpty()) {
+            throw BadRequestException("Balances cannot be empty")
+        }
+        val accountIds = request.balances.map { it.savingsAccountId }.distinct()
+        val accounts = savingsAccountRepository.findAllById(accountIds).associateBy { it.id }
+        if (accounts.size != accountIds.size) {
+            throw NotFoundException("One or more savings accounts not found")
+        }
+        return request.balances.map { input ->
+            val amount = input.balanceAmount
+            if (amount < BigDecimal.ZERO) {
+                throw BadRequestException("Balance cannot be negative")
+            }
+            val account = accounts[input.savingsAccountId]
+                ?: throw NotFoundException("Savings account ${input.savingsAccountId} not found")
+            val existing =
+                savingsAccountBalanceRepository.findBySavingsAccountIdAndBalanceDate(
+                    input.savingsAccountId,
+                    request.balanceDate,
+                )
+            val saved =
+                if (existing != null) {
+                    existing.balanceAmount = amount
+                    savingsAccountBalanceRepository.save(existing)
+                } else {
+                    savingsAccountBalanceRepository.save(
+                        SavingsAccountBalance(
+                            savingsAccount = account,
+                            balanceDate = request.balanceDate,
+                            balanceAmount = amount,
+                        ),
+                    )
+                }
+            saved.toResponse()
+        }
+    }
+
     fun listBalances(): List<SavingsAccountBalanceResponse> =
         savingsAccountBalanceRepository.findAllByOrderByBalanceDateDescIdDesc().map { it.toResponse() }
+
+    fun delete(id: Long) {
+        val balance =
+            savingsAccountBalanceRepository.findById(id).orElseThrow {
+                NotFoundException("Savings account balance $id not found")
+            }
+        savingsAccountBalanceRepository.delete(balance)
+    }
 
     fun monthlySummary(
         from: YearMonth,

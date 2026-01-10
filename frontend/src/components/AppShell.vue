@@ -9,6 +9,10 @@ SPDX-License-Identifier: GPL-3.0-only
       <div class="px-4 py-4 d-flex align-center">
         <v-img :src="logo" alt="Fairshare" max-height="80" max-width="248" contain class="w-100" />
       </div>
+      <v-divider class="my-2" />
+      <div class="px-4 pb-4">
+        <MonthYearPicker :model-value="summaryMonth" @update:modelValue="updateMonth" />
+      </div>
       <v-divider />
       <v-list nav v-model:opened="openGroups">
         <v-list-item
@@ -69,14 +73,7 @@ SPDX-License-Identifier: GPL-3.0-only
           />
         </v-list-group>
       </v-list>
-      <v-divider />
-      <v-list density="compact">
-        <v-list-item title="Letzte Aktualisierung" :subtitle="summary ? 'Aktuell' : 'Laedt...'" />
-      </v-list>
       <v-divider class="my-2" />
-      <div class="px-4 pb-4">
-        <MonthYearPicker :model-value="summaryMonth" @update:modelValue="updateMonth" />
-      </div>
     </v-navigation-drawer>
 
     <v-main>

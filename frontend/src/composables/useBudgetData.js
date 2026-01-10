@@ -98,6 +98,18 @@ export const useBudgetData = () => {
     }
   };
 
+  const deleteSavingsAccountBalance = async (id) => {
+    error.value = "";
+    try {
+      await request(`/api/wealth/balances/${id}`, { method: "DELETE" });
+      await refreshAll();
+      return true;
+    } catch (err) {
+      error.value = err?.message || "Kontostand konnte nicht geloescht werden.";
+      return false;
+    }
+  };
+
   const fetchBudgetItems = async () => {
     const query = summaryMonth.value ? `?month=${summaryMonth.value}` : "";
     budgetItems.value = await request(`/api/budget-items${query}`);
@@ -303,6 +315,43 @@ export const useBudgetData = () => {
       return true;
     } catch (err) {
       error.value = err?.message || "Kontostand konnte nicht gespeichert werden.";
+      return false;
+    }
+  };
+
+  const createSavingsAccountBalancesBulk = async (balanceDate, balances) => {
+    if (!balanceDate) {
+      error.value = "Bitte ein Datum waehlen.";
+      return false;
+    }
+    if (!Array.isArray(balances) || balances.length === 0) {
+      error.value = "Bitte mindestens ein Sparkonto auswaehlen.";
+      return false;
+    }
+    const payload = balances
+      .filter((entry) => entry.savingsAccountId)
+      .map((entry) => ({
+        savingsAccountId: entry.savingsAccountId,
+        balanceAmount: Number(entry.balanceAmount || 0)
+      }));
+    if (payload.length === 0) {
+      error.value = "Bitte mindestens ein Sparkonto auswaehlen.";
+      return false;
+    }
+    error.value = "";
+    try {
+      await request("/api/wealth/balances/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          balanceDate,
+          balances: payload
+        })
+      });
+      await refreshAll();
+      return true;
+    } catch (err) {
+      error.value = err?.message || "Kontostaende konnten nicht gespeichert werden.";
       return false;
     }
   };
@@ -680,6 +729,8 @@ export const useBudgetData = () => {
     fetchWealthSummary,
     fetchWealthBalances,
     createSavingsAccountBalance,
+    deleteSavingsAccountBalance,
+    createSavingsAccountBalancesBulk,
     createBudgetItem,
     updateBudgetItem,
     deleteBudgetItem,

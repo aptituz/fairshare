@@ -40,6 +40,9 @@ SPDX-License-Identifier: GPL-3.0-only
           <v-list-item @click="balanceDialogOpen = true">
             <v-list-item-title>Kontostand erfassen</v-list-item-title>
           </v-list-item>
+          <v-list-item @click="openBulkDialog">
+            <v-list-item-title>Alle Kontostaende erfassen</v-list-item-title>
+          </v-list-item>
         </v-list>
       </v-menu>
     </v-col>
@@ -61,28 +64,46 @@ SPDX-License-Identifier: GPL-3.0-only
       <v-card>
         <v-card-title>Kontostaende</v-card-title>
         <v-card-text>
-          <v-table density="compact">
-            <thead>
-              <tr>
-                <th class="text-left">Datum</th>
-                <th class="text-left">Sparkonto</th>
-                <th class="text-right">Betrag</th>
-                <th class="text-right">Aktion</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="balance in balances" :key="balance.id">
-                <td>{{ balance.balanceDate }}</td>
-                <td>{{ accountName(balance.savingsAccountId) }}</td>
-                <td class="text-right">{{ formatCurrency(balance.balanceAmount) }}</td>
-                <td class="text-right">
-                  <v-btn size="small" variant="text" icon @click="openEditBalance(balance)">
-                    <v-icon icon="mdi-pencil" size="small" />
-                  </v-btn>
-                </td>
-              </tr>
-            </tbody>
-          </v-table>
+          <div v-for="group in groupedBalances" :key="group.month" class="mb-6">
+            <div class="text-subtitle-1 font-weight-medium mb-2">{{ group.month }}</div>
+            <v-table density="compact">
+              <thead>
+                <tr>
+                  <th class="text-left">Datum</th>
+                  <th class="text-left">Sparkonto</th>
+                  <th class="text-right">Betrag</th>
+                  <th class="text-right">Aktion</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="balance in group.items" :key="balance.rowKey">
+                  <td>{{ balanceLabel(balance) }}</td>
+                  <td>{{ accountName(balance.savingsAccountId) }}</td>
+                  <td class="text-right">{{ formatCurrency(balance.balanceAmount) }}</td>
+                  <td class="text-right">
+                    <v-btn
+                      v-if="!balance.isCarried"
+                      size="small"
+                      variant="text"
+                      icon
+                      @click="openEditBalance(balance)"
+                    >
+                      <v-icon icon="mdi-pencil" size="small" />
+                    </v-btn>
+                    <v-btn
+                      v-if="!balance.isCarried"
+                      size="small"
+                      variant="text"
+                      icon
+                      @click="deleteBalance(balance)"
+                    >
+                      <v-icon icon="mdi-delete" size="small" />
+                    </v-btn>
+                  </td>
+                </tr>
+              </tbody>
+            </v-table>
+          </div>
         </v-card-text>
       </v-card>
     </v-col>
@@ -111,6 +132,45 @@ SPDX-License-Identifier: GPL-3.0-only
       </v-card-actions>
     </v-card>
   </v-dialog>
+
+  <v-dialog v-model="bulkDialogOpen" max-width="680">
+    <v-card>
+      <v-card-title>Kontostaende erfassen</v-card-title>
+      <v-card-text>
+        <div class="d-flex flex-column ga-4">
+          <v-text-field v-model="bulkDate" type="date" label="Datum" />
+          <v-table density="compact">
+            <thead>
+              <tr>
+                <th class="text-left">Sparkonto</th>
+                <th class="text-right">Betrag</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="entry in bulkBalances" :key="entry.savingsAccountId">
+                <td>{{ accountName(entry.savingsAccountId) }}</td>
+                <td class="text-right">
+                  <v-text-field
+                    v-model="entry.balanceAmount"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    density="compact"
+                    hide-details
+                  />
+                </td>
+              </tr>
+            </tbody>
+          </v-table>
+        </div>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn variant="text" @click="bulkDialogOpen = false">Abbrechen</v-btn>
+        <v-btn color="primary" @click="submitBulkBalances">Speichern</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script setup>
@@ -134,6 +194,8 @@ const props = defineProps({
   fetchWealthSummary: { type: Function, required: true },
   fetchWealthBalances: { type: Function, required: true },
   createSavingsAccountBalance: { type: Function, required: true },
+  deleteSavingsAccountBalance: { type: Function, required: true },
+  createSavingsAccountBalancesBulk: { type: Function, required: true },
   formatCurrency: { type: Function, required: true }
 });
 
@@ -151,6 +213,9 @@ const selectedAccountId = ref(null);
 const balanceDate = ref("");
 const balanceAmount = ref("");
 const editingBalanceId = ref(null);
+const bulkDialogOpen = ref(false);
+const bulkDate = ref("");
+const bulkBalances = ref([]);
 
 const loadSummary = async () => {
   summaryData.value = await props.fetchWealthSummary(fromMonth.value, toMonth.value);
@@ -226,6 +291,77 @@ const accountName = (accountId) => {
   return match?.name || "Unbekannt";
 };
 
+const balanceLabel = (balance) => {
+  if (balance.isCarried) {
+    return `Vortrag ${balance.sourceDate}`;
+  }
+  return balance.balanceDate;
+};
+
+const groupedBalances = computed(() => {
+  const byMonth = new Map();
+  balances.value.forEach((balance) => {
+    const month = String(balance.balanceDate).slice(0, 7);
+    if (!byMonth.has(month)) {
+      byMonth.set(month, []);
+    }
+    byMonth.get(month).push(balance);
+  });
+  const months = Array.from(byMonth.keys()).sort((a, b) => b.localeCompare(a));
+  return months.map((month) => {
+    const items = byMonth.get(month) || [];
+    const monthEnd = monthToEndDate(month);
+    const carried = props.savingsAccounts
+      .filter((account) => account?.id)
+      .map((account) => {
+        const existing = items.find((entry) => entry.savingsAccountId === account.id);
+        if (existing) {
+          return null;
+        }
+        const prior = balances.value
+          .filter((entry) => entry.savingsAccountId === account.id)
+          .filter((entry) => entry.balanceDate <= monthEnd)
+          .sort((a, b) => String(b.balanceDate).localeCompare(String(a.balanceDate)))[0];
+        if (!prior) {
+          return null;
+        }
+        return {
+          rowKey: `carry-${account.id}-${month}`,
+          savingsAccountId: account.id,
+          balanceAmount: prior.balanceAmount,
+          balanceDate: monthEnd,
+          sourceDate: prior.balanceDate,
+          isCarried: true
+        };
+      })
+      .filter(Boolean);
+    const mapped = items.map((entry) => ({
+      ...entry,
+      rowKey: `entry-${entry.id}`,
+      isCarried: false
+    }));
+    const combined = [...mapped, ...carried].sort((a, b) => {
+      if (a.isCarried !== b.isCarried) {
+        return a.isCarried ? 1 : -1;
+      }
+      return String(b.balanceDate).localeCompare(String(a.balanceDate));
+    });
+    return { month, items: combined };
+  });
+});
+
+const monthToEndDate = (month) => {
+  if (!month) {
+    return "";
+  }
+  const [year, value] = month.split("-").map((part) => Number(part));
+  if (!year || !value) {
+    return "";
+  }
+  const lastDay = new Date(year, value, 0).getDate();
+  return `${year}-${String(value).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+};
+
 const balanceDialogTitle = computed(() =>
   editingBalanceId.value ? "Kontostand bearbeiten" : "Kontostand erfassen"
 );
@@ -236,6 +372,29 @@ const openEditBalance = (balance) => {
   balanceDate.value = balance.balanceDate;
   balanceAmount.value = balance.balanceAmount;
   balanceDialogOpen.value = true;
+};
+
+const deleteBalance = async (balance) => {
+  if (!balance?.id) {
+    return;
+  }
+  if (!window.confirm("Kontostand wirklich loeschen?")) {
+    return;
+  }
+  const success = await props.deleteSavingsAccountBalance(balance.id);
+  if (success) {
+    await loadSummary();
+    await loadBalances();
+  }
+};
+
+const openBulkDialog = () => {
+  bulkBalances.value = props.savingsAccounts.map((account) => ({
+    savingsAccountId: account.id,
+    balanceAmount: ""
+  }));
+  bulkDate.value = "";
+  bulkDialogOpen.value = true;
 };
 
 const submitBalance = async () => {
@@ -250,6 +409,17 @@ const submitBalance = async () => {
     balanceDate.value = "";
     balanceAmount.value = "";
     editingBalanceId.value = null;
+    await loadSummary();
+    await loadBalances();
+  }
+};
+
+const submitBulkBalances = async () => {
+  const success = await props.createSavingsAccountBalancesBulk(bulkDate.value, bulkBalances.value);
+  if (success) {
+    bulkDialogOpen.value = false;
+    bulkDate.value = "";
+    bulkBalances.value = [];
     await loadSummary();
     await loadBalances();
   }

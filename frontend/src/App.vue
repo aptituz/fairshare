@@ -52,6 +52,8 @@ SPDX-License-Identifier: GPL-3.0-only
       :fetchWealthSummary="fetchWealthSummary"
       :fetchWealthBalances="fetchWealthBalances"
       :createSavingsAccountBalance="createSavingsAccountBalance"
+      :deleteSavingsAccountBalance="deleteSavingsAccountBalance"
+      :createSavingsAccountBalancesBulk="createSavingsAccountBalancesBulk"
       :formatCurrency="formatCurrency"
     />
 
@@ -138,6 +140,8 @@ const {
   fetchWealthSummary,
   fetchWealthBalances,
   createSavingsAccountBalance,
+  deleteSavingsAccountBalance,
+  createSavingsAccountBalancesBulk,
   createBudgetItem,
   updateBudgetItem,
   deleteBudgetItem,
