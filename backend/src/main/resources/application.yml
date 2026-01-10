@@ -16,3 +16,6 @@ server:
 springdoc:
   swagger-ui:
     path: /swagger-ui
+jwt:
+  secret: change-me-change-me-change-me-change-me
+  expirationMinutes: 720

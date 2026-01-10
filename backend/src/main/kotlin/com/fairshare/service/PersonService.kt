@@ -22,6 +22,7 @@ class PersonService(
     private val personRepository: PersonRepository,
     private val budgetItemRepository: BudgetItemRepository
 ) {
+    private val log = org.slf4j.LoggerFactory.getLogger(PersonService::class.java)
     fun list(): List<PersonResponse> = personRepository.findAll().map { it.toResponse() }
 
     fun create(request: CreatePersonRequest): PersonResponse {
@@ -29,7 +30,8 @@ class PersonService(
         if (name.isBlank()) {
             throw BadRequestException("Person name cannot be blank")
         }
-        val saved = personRepository.save(Person(name = name))
+        val username = generateUsername(name)
+        val saved = personRepository.save(Person(name = name, username = username))
         return saved.toResponse()
     }
 
@@ -58,5 +60,19 @@ class PersonService(
             throw ConflictException("Person $id is used by budget items")
         }
         personRepository.delete(person)
+    }
+
+    private fun generateUsername(name: String): String {
+        val base = name.lowercase().replace("\\s+".toRegex(), "")
+        var candidate = base
+        var counter = 1
+        while (personRepository.existsByUsername(candidate)) {
+            counter += 1
+            candidate = "$base$counter"
+        }
+        if (candidate != base) {
+            log.info("Generated username '$candidate' for '$name'")
+        }
+        return candidate
     }
 }

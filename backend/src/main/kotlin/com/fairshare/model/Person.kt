@@ -20,4 +20,10 @@ class Person(
     var id: Long? = null,
     @Column(nullable = false, unique = true)
     var name: String,
+    @Column(nullable = false, unique = true, length = 100)
+    var username: String,
+    @Column(name = "password_hash", length = 64)
+    var passwordHash: String? = null,
+    @Column(name = "password_salt", length = 64)
+    var passwordSalt: String? = null,
 )

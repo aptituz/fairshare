@@ -714,6 +714,62 @@ databaseChangeLog:
                   name: balance_date
 
   - changeSet:
+      id: 017-add-person-auth-fields
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        not:
+          columnExists:
+            tableName: persons
+            columnName: username
+      changes:
+        - addColumn:
+            tableName: persons
+            columns:
+              - column:
+                  name: username
+                  type: VARCHAR(100)
+              - column:
+                  name: password_hash
+                  type: VARCHAR(64)
+              - column:
+                  name: password_salt
+                  type: VARCHAR(64)
+        - sql:
+            splitStatements: true
+            endDelimiter: ;
+            sql: |
+              WITH base AS (
+                SELECT
+                  id,
+                  lower(regexp_replace(name, '\\s+', '', 'g')) AS base_username
+                FROM persons
+              ),
+              numbered AS (
+                SELECT
+                  id,
+                  base_username,
+                  row_number() OVER (PARTITION BY base_username ORDER BY id) AS rn
+                FROM base
+              )
+              UPDATE persons p
+              SET username = CASE
+                WHEN numbered.rn = 1 THEN numbered.base_username
+                ELSE numbered.base_username || numbered.rn
+              END
+              FROM numbered
+              WHERE p.id = numbered.id;
+        - addNotNullConstraint:
+            tableName: persons
+            columnName: username
+            columnDataType: VARCHAR(100)
+        - addUniqueConstraint:
+            tableName: persons
+            columnNames: username
+            constraintName: uq_persons_username
+
+  - changeSet:
       id: 016-savings-accounts-owner-nullable
       author: codex
       preConditions:

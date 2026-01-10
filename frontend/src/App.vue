@@ -4,12 +4,27 @@ SPDX-License-Identifier: GPL-3.0-only
 -->
 
 <template>
+  <v-dialog v-model="authDialogOpen" persistent max-width="520">
+    <AuthView
+      :setupRequired="setupRequired"
+      :loading="authLoading"
+      :error="authError"
+      :onSetup="setup"
+      :onLogin="login"
+      @authenticated="handleAuthenticated"
+    />
+  </v-dialog>
   <AppShell
+    v-if="isAuthenticated"
     :currentView="currentView"
     :currentSubView="currentSubView"
     :datenerfassungNavItems="datenerfassungNavItems"
     :summary="summary"
     :summaryMonth="summaryMonth"
+    :currentUsername="currentUsername"
+    :currentName="currentName"
+    :onChangePassword="changePassword"
+    :onLogout="logout"
     @navigate="handleNavigate"
     @month-change="handleMonthChange"
   >
@@ -86,7 +101,7 @@ SPDX-License-Identifier: GPL-3.0-only
 </template>
 
 <script setup>
-import { computed, onMounted } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import AppShell from "./components/AppShell.vue";
 import OverviewView from "./views/OverviewView.vue";
@@ -94,6 +109,8 @@ import KostenverteilungView from "./views/KostenverteilungView.vue";
 import DatenerfassungView from "./views/DatenerfassungView.vue";
 import StammdatenView from "./views/StammdatenView.vue";
 import VermoegenView from "./views/VermoegenView.vue";
+import AuthView from "./views/AuthView.vue";
+import { useAuth } from "./composables/useAuth";
 import { useBudgetData } from "./composables/useBudgetData";
 
 const {
@@ -135,6 +152,25 @@ const {
   categoryRank,
   setSummaryMonth
 } = useBudgetData();
+
+const {
+  ready: authReady,
+  setupRequired,
+  loading: authLoading,
+  error: authError,
+  fetchStatus,
+  setup,
+  login,
+  fetchMe,
+  changePassword,
+  hasToken,
+  clearToken
+} = useAuth();
+
+const isAuthenticated = ref(false);
+const authDialogOpen = ref(false);
+const currentUsername = ref("");
+const currentName = ref("");
 
 const route = useRoute();
 const router = useRouter();
@@ -232,7 +268,47 @@ const handleNavigate = ({ view, subView }) => {
   router.push({ name: "overview" });
 };
 
-onMounted(() => {
-  refreshAll();
+const refreshIfAuthenticated = async () => {
+  if (isAuthenticated.value) {
+    const me = await fetchMe();
+    if (!me) {
+      isAuthenticated.value = false;
+      return;
+    }
+    currentUsername.value = me.username;
+    currentName.value = me.name;
+    await refreshAll();
+  }
+};
+
+const handleAuthenticated = async () => {
+  isAuthenticated.value = true;
+  authDialogOpen.value = false;
+  await refreshIfAuthenticated();
+};
+
+const logout = () => {
+  clearToken();
+  isAuthenticated.value = false;
+  currentUsername.value = "";
+  currentName.value = "";
+};
+
+onMounted(async () => {
+  await fetchStatus();
+  isAuthenticated.value = hasToken();
+  authDialogOpen.value = !isAuthenticated.value;
+  if (!isAuthenticated.value) {
+    router.replace({ name: "overview" });
+    return;
+  }
+  await refreshIfAuthenticated();
+});
+
+watch(isAuthenticated, (value) => {
+  authDialogOpen.value = !value;
+  if (!value && authReady.value) {
+    router.replace({ name: "overview" });
+  }
 });
 </script>

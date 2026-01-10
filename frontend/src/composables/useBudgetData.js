@@ -8,7 +8,12 @@ import { computed, ref } from "vue";
 const apiBase = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
 const request = async (path, options) => {
-  const response = await fetch(`${apiBase}${path}`, options);
+  const token = typeof window !== "undefined" ? window.localStorage.getItem("fairshare.jwt") : null;
+  const headers = {
+    ...(options?.headers || {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {})
+  };
+  const response = await fetch(`${apiBase}${path}`, { ...options, headers });
   if (!response.ok) {
     const message = await response.text();
     throw new Error(message || `Request failed with ${response.status}`);

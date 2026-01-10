@@ -12,4 +12,5 @@ fun Person.toResponse(): PersonResponse =
     PersonResponse(
         id = id,
         name = name,
+        username = username,
     )

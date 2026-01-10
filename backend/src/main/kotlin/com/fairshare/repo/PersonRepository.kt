@@ -8,4 +8,10 @@ package com.fairshare.repo
 import com.fairshare.model.Person
 import org.springframework.data.jpa.repository.JpaRepository
 
-interface PersonRepository : JpaRepository<Person, Long>
+interface PersonRepository : JpaRepository<Person, Long> {
+    fun existsByUsername(username: String): Boolean
+
+    fun findByUsername(username: String): Person?
+
+    fun existsByPasswordHashIsNotNull(): Boolean
+}
