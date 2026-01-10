@@ -9,6 +9,7 @@ const EmptyRoute = { template: "<div></div>" };
 
 const routes = [
   { path: "/", name: "overview", component: EmptyRoute },
+  { path: "/wealth", name: "wealth", component: EmptyRoute },
   { path: "/cost-split", name: "cost-split", component: EmptyRoute },
   { path: "/income/:scope(.*)?", name: "income", component: EmptyRoute },
   { path: "/expenses/:scope(.*)?", name: "expenses", component: EmptyRoute },

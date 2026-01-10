@@ -31,6 +31,15 @@ SPDX-License-Identifier: GPL-3.0-only
       :formatCurrency="formatCurrency"
     />
 
+    <VermoegenView
+      v-else-if="currentView === 'vermoegen'"
+      :savingsAccounts="savingsAccounts"
+      :fetchWealthSummary="fetchWealthSummary"
+      :fetchWealthBalances="fetchWealthBalances"
+      :createSavingsAccountBalance="createSavingsAccountBalance"
+      :formatCurrency="formatCurrency"
+    />
+
     <DatenerfassungView
       v-else-if="currentView === 'datenerfassung'"
       :currentSubView="currentSubView"
@@ -61,6 +70,7 @@ SPDX-License-Identifier: GPL-3.0-only
       :incomeCategoryOptions="incomeCategoryOptions"
       :expenseCategoryOptions="expenseCategoryOptions"
       :persons="persons"
+      :savingsAccounts="savingsAccounts"
       :categorySaving="categorySaving"
       :personSaving="personSaving"
       :createCategory="createCategory"
@@ -68,6 +78,9 @@ SPDX-License-Identifier: GPL-3.0-only
       :deleteCategory="deleteCategory"
       :createPerson="createPerson"
       :updatePerson="updatePerson"
+      :createSavingsAccount="createSavingsAccount"
+      :updateSavingsAccount="updateSavingsAccount"
+      :deleteSavingsAccount="deleteSavingsAccount"
     />
   </AppShell>
 </template>
@@ -80,11 +93,13 @@ import OverviewView from "./views/OverviewView.vue";
 import KostenverteilungView from "./views/KostenverteilungView.vue";
 import DatenerfassungView from "./views/DatenerfassungView.vue";
 import StammdatenView from "./views/StammdatenView.vue";
+import VermoegenView from "./views/VermoegenView.vue";
 import { useBudgetData } from "./composables/useBudgetData";
 
 const {
   categories,
   persons,
+  savingsAccounts,
   budgetItems,
   summary,
   summaryMonth,
@@ -100,6 +115,12 @@ const {
   deleteCategory,
   createPerson,
   updatePerson,
+  createSavingsAccount,
+  updateSavingsAccount,
+  deleteSavingsAccount,
+  fetchWealthSummary,
+  fetchWealthBalances,
+  createSavingsAccountBalance,
   createBudgetItem,
   updateBudgetItem,
   deleteBudgetItem,
@@ -119,6 +140,9 @@ const route = useRoute();
 const router = useRouter();
 
 const currentView = computed(() => {
+  if (route.name === "wealth") {
+    return "vermoegen";
+  }
   if (route.name === "cost-split") {
     return "kostenverteilung";
   }
@@ -182,6 +206,10 @@ const handleMonthChange = async (value) => {
 const handleNavigate = ({ view, subView }) => {
   if (view === "kostenverteilung") {
     router.push({ name: "cost-split" });
+    return;
+  }
+  if (view === "vermoegen") {
+    router.push({ name: "wealth" });
     return;
   }
   if (view === "datenerfassung") {

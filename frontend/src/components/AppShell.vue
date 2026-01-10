@@ -17,6 +17,11 @@ SPDX-License-Identifier: GPL-3.0-only
           @click="navigate('overview')"
         />
         <v-list-item
+          title="Vermoegen"
+          :active="currentView === 'vermoegen'"
+          @click="navigate('vermoegen')"
+        />
+        <v-list-item
           title="Kostenverteilung"
           :active="currentView === 'kostenverteilung'"
           @click="navigate('kostenverteilung')"
@@ -56,6 +61,11 @@ SPDX-License-Identifier: GPL-3.0-only
             title="Personen"
             :active="currentView === 'stammdaten' && currentSubView === 'persons'"
             @click="navigate('stammdaten', 'persons')"
+          />
+          <v-list-item
+            title="Sparkonten"
+            :active="currentView === 'stammdaten' && currentSubView === 'savings-accounts'"
+            @click="navigate('stammdaten', 'savings-accounts')"
           />
         </v-list-group>
       </v-list>

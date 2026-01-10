@@ -617,3 +617,112 @@ databaseChangeLog:
                   name: start_date
               - column:
                   name: end_date
+
+  - changeSet:
+      id: 014-add-savings-accounts
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        not:
+          tableExists:
+            tableName: savings_accounts
+      changes:
+        - createTable:
+            tableName: savings_accounts
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_savings_accounts
+              - column:
+                  name: name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: owner_person_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: savings_accounts
+            baseColumnNames: owner_person_id
+            referencedTableName: persons
+            referencedColumnNames: id
+            constraintName: fk_savings_accounts_owner
+            onDelete: RESTRICT
+        - createIndex:
+            tableName: savings_accounts
+            indexName: idx_savings_accounts_owner
+            columns:
+              - column:
+                  name: owner_person_id
+
+  - changeSet:
+      id: 015-add-savings-account-balances
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        not:
+          tableExists:
+            tableName: savings_account_balances
+      changes:
+        - createTable:
+            tableName: savings_account_balances
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_savings_account_balances
+              - column:
+                  name: savings_account_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: balance_date
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: balance_amount
+                  type: NUMERIC(14,2)
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: savings_account_balances
+            baseColumnNames: savings_account_id
+            referencedTableName: savings_accounts
+            referencedColumnNames: id
+            constraintName: fk_savings_account_balances_account
+            onDelete: CASCADE
+        - createIndex:
+            tableName: savings_account_balances
+            indexName: idx_savings_account_balances_account_date
+            columns:
+              - column:
+                  name: savings_account_id
+              - column:
+                  name: balance_date
+
+  - changeSet:
+      id: 016-savings-accounts-owner-nullable
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        tableExists:
+          tableName: savings_accounts
+      changes:
+        - dropNotNullConstraint:
+            tableName: savings_accounts
+            columnName: owner_person_id
+            columnDataType: BIGINT

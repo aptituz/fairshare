@@ -40,6 +40,7 @@ const currentMonth = () => {
 export const useBudgetData = () => {
   const categories = ref([]);
   const persons = ref([]);
+  const savingsAccounts = ref([]);
   const budgetItems = ref([]);
   const summary = ref(null);
   const error = ref("");
@@ -67,6 +68,31 @@ export const useBudgetData = () => {
     persons.value = await request("/api/persons");
   };
 
+  const fetchSavingsAccounts = async () => {
+    savingsAccounts.value = await request("/api/savings-accounts");
+  };
+
+  const fetchWealthSummary = async (fromMonth, toMonth) => {
+    if (!fromMonth || !toMonth) {
+      return [];
+    }
+    try {
+      return await request(`/api/wealth/summary?from=${fromMonth}&to=${toMonth}`);
+    } catch (err) {
+      error.value = err?.message || "Vermoegensdaten konnten nicht geladen werden.";
+      return [];
+    }
+  };
+
+  const fetchWealthBalances = async () => {
+    try {
+      return await request("/api/wealth/balances");
+    } catch (err) {
+      error.value = err?.message || "Kontostaende konnten nicht geladen werden.";
+      return [];
+    }
+  };
+
   const fetchBudgetItems = async () => {
     const query = summaryMonth.value ? `?month=${summaryMonth.value}` : "";
     budgetItems.value = await request(`/api/budget-items${query}`);
@@ -80,7 +106,13 @@ export const useBudgetData = () => {
   const refreshAll = async () => {
     error.value = "";
     try {
-      await Promise.all([fetchCategories(), fetchPersons(), fetchBudgetItems(), fetchSummary()]);
+      await Promise.all([
+        fetchCategories(),
+        fetchPersons(),
+        fetchSavingsAccounts(),
+        fetchBudgetItems(),
+        fetchSummary()
+      ]);
     } catch (err) {
       error.value = err?.message || "Daten konnten nicht geladen werden.";
     }
@@ -184,6 +216,88 @@ export const useBudgetData = () => {
       return true;
     } catch (err) {
       error.value = err?.message || "Person konnte nicht aktualisiert werden.";
+      return false;
+    }
+  };
+
+  const createSavingsAccount = async (name, ownerId) => {
+    if (!name.trim()) {
+      error.value = "Bitte einen gueltigen Namen angeben.";
+      return false;
+    }
+    error.value = "";
+    try {
+      await request("/api/savings-accounts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim(), ownerId })
+      });
+      await refreshAll();
+      return true;
+    } catch (err) {
+      error.value = err?.message || "Spar-Konto konnte nicht gespeichert werden.";
+      return false;
+    }
+  };
+
+  const updateSavingsAccount = async (id, name, ownerId) => {
+    if (!name.trim()) {
+      error.value = "Bitte einen gueltigen Namen angeben.";
+      return false;
+    }
+    error.value = "";
+    try {
+      await request(`/api/savings-accounts/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim(), ownerId })
+      });
+      await refreshAll();
+      return true;
+    } catch (err) {
+      error.value = err?.message || "Spar-Konto konnte nicht aktualisiert werden.";
+      return false;
+    }
+  };
+
+  const deleteSavingsAccount = async (id) => {
+    error.value = "";
+    try {
+      await request(`/api/savings-accounts/${id}`, { method: "DELETE" });
+      await refreshAll();
+    } catch (err) {
+      error.value = err?.message || "Spar-Konto konnte nicht geloescht werden.";
+    }
+  };
+
+  const createSavingsAccountBalance = async (accountId, balanceDate, balanceAmount) => {
+    const numericAmount = Number(balanceAmount);
+    if (!accountId) {
+      error.value = "Bitte ein Sparkonto waehlen.";
+      return false;
+    }
+    if (!balanceDate) {
+      error.value = "Bitte ein Datum waehlen.";
+      return false;
+    }
+    if (Number.isNaN(numericAmount)) {
+      error.value = "Bitte einen gueltigen Betrag angeben.";
+      return false;
+    }
+    error.value = "";
+    try {
+      await request(`/api/wealth/accounts/${accountId}/balances`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          balanceDate,
+          balanceAmount: numericAmount
+        })
+      });
+      await refreshAll();
+      return true;
+    } catch (err) {
+      error.value = err?.message || "Kontostand konnte nicht gespeichert werden.";
       return false;
     }
   };
@@ -537,6 +651,7 @@ export const useBudgetData = () => {
   return {
     categories,
     persons,
+    savingsAccounts,
     budgetItems,
     summary,
     summaryMonth,
@@ -554,6 +669,12 @@ export const useBudgetData = () => {
     deleteCategory,
     createPerson,
     updatePerson,
+    createSavingsAccount,
+    updateSavingsAccount,
+    deleteSavingsAccount,
+    fetchWealthSummary,
+    fetchWealthBalances,
+    createSavingsAccountBalance,
     createBudgetItem,
     updateBudgetItem,
     deleteBudgetItem,
