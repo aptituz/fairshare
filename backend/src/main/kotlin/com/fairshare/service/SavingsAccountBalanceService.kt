@@ -158,12 +158,14 @@ class SavingsAccountBalanceService(
             }
             val total = currentAmounts.values.fold(BigDecimal.ZERO) { acc, value -> acc.add(value) }
             val monthlyBalance = householdBalances[month.toString()] ?: BigDecimal.ZERO
-            SavingsAccountBalanceSummaryResponse(
+            val response =
+                SavingsAccountBalanceSummaryResponse(
                 month = month.toString(),
                 totalBalance = total,
                 expectedBalance = expectedBalance,
             )
             expectedBalance = expectedBalance.add(monthlyBalance)
+            response
         }
     }
 }
