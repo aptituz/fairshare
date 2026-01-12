@@ -4,7 +4,6 @@ spring:
     username: fairshare
     password: fairshare
   jpa:
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: none
     show-sql: true

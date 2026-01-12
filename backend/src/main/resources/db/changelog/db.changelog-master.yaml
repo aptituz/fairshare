@@ -168,25 +168,6 @@ databaseChangeLog:
                     unique: true
 
   - changeSet:
-      id: 004b-seed-default-persons
-      author: codex
-      preConditions:
-        onFail: MARK_RAN
-        onError: MARK_RAN
-        sqlCheck:
-          expectedResult: 0
-          sql: SELECT COUNT(*) FROM persons
-      changes:
-        - sql:
-            splitStatements: true
-            endDelimiter: ;
-            sql: |
-              INSERT INTO persons (name)
-              VALUES
-                ('Person 1'),
-                ('Person 2');
-
-  - changeSet:
       id: 005-add-person-id-to-budget-items
       author: codex
       preConditions:
@@ -244,24 +225,6 @@ databaseChangeLog:
                     nullable: false
 
   - changeSet:
-      id: 006b-backfill-budget-items-active
-      author: codex
-      preConditions:
-        onFail: MARK_RAN
-        onError: MARK_RAN
-        columnExists:
-          tableName: budget_items
-          columnName: active
-      changes:
-        - sql:
-            splitStatements: true
-            endDelimiter: ;
-            sql: |
-              UPDATE budget_items
-              SET active = TRUE
-              WHERE active IS NULL;
-
-  - changeSet:
       id: 007-add-budget-items-planned
       author: codex
       preConditions:
@@ -283,24 +246,6 @@ databaseChangeLog:
                     nullable: false
 
   - changeSet:
-      id: 007b-backfill-budget-items-planned
-      author: codex
-      preConditions:
-        onFail: MARK_RAN
-        onError: MARK_RAN
-        columnExists:
-          tableName: budget_items
-          columnName: planned
-      changes:
-        - sql:
-            splitStatements: true
-            endDelimiter: ;
-            sql: |
-              UPDATE budget_items
-              SET planned = TRUE
-              WHERE planned IS NULL;
-
-  - changeSet:
       id: 008-add-budget-items-category-correction
       author: codex
       preConditions:
@@ -320,24 +265,6 @@ databaseChangeLog:
                   defaultValueBoolean: false
                   constraints:
                     nullable: false
-
-  - changeSet:
-      id: 008b-backfill-budget-items-category-correction
-      author: codex
-      preConditions:
-        onFail: MARK_RAN
-        onError: MARK_RAN
-        columnExists:
-          tableName: budget_items
-          columnName: category_correction
-      changes:
-        - sql:
-            splitStatements: true
-            endDelimiter: ;
-            sql: |
-              UPDATE budget_items
-              SET category_correction = FALSE
-              WHERE category_correction IS NULL;
 
   - changeSet:
       id: 009-drop-budget-items-active
@@ -381,67 +308,6 @@ databaseChangeLog:
             onDelete: SET NULL
 
   - changeSet:
-      id: 010b-backfill-budget-items-previous
-      author: codex
-      preConditions:
-        onFail: MARK_RAN
-        onError: MARK_RAN
-        columnExists:
-          tableName: budget_items
-          columnName: previous_budget_item_id
-      changes:
-        - sql:
-            splitStatements: true
-            endDelimiter: ;
-            sql: |
-              WITH ordered AS (
-                SELECT
-                  id,
-                  LAG(id) OVER (
-                    PARTITION BY name
-                    ORDER BY start_date, id
-                  ) AS prev_id
-                FROM budget_items
-              )
-              UPDATE budget_items b
-              SET previous_budget_item_id = ordered.prev_id
-              FROM ordered
-              WHERE b.id = ordered.id
-                AND ordered.prev_id IS NOT NULL;
-
-  - changeSet:
-      id: 010c-fix-budget-items-previous-by-person
-      author: codex
-      preConditions:
-        onFail: MARK_RAN
-        onError: MARK_RAN
-        columnExists:
-          tableName: budget_items
-          columnName: previous_budget_item_id
-      changes:
-        - sql:
-            splitStatements: true
-            endDelimiter: ;
-            sql: |
-              UPDATE budget_items
-              SET previous_budget_item_id = NULL;
-
-              WITH ordered AS (
-                SELECT
-                  id,
-                  LAG(id) OVER (
-                    PARTITION BY name, person_id, type
-                    ORDER BY start_date, id
-                  ) AS prev_id
-                FROM budget_items
-              )
-              UPDATE budget_items b
-              SET previous_budget_item_id = ordered.prev_id
-              FROM ordered
-              WHERE b.id = ordered.id
-                AND ordered.prev_id IS NOT NULL;
-
-  - changeSet:
       id: 011-add-budget-items-root
       author: codex
       preConditions:
@@ -467,103 +333,6 @@ databaseChangeLog:
             referencedColumnNames: id
             constraintName: fk_budget_items_root
             onDelete: SET NULL
-
-  - changeSet:
-      id: 011b-backfill-budget-items-root
-      author: codex
-      preConditions:
-        onFail: MARK_RAN
-        onError: MARK_RAN
-        columnExists:
-          tableName: budget_items
-          columnName: root_budget_item_id
-      changes:
-        - sql:
-            splitStatements: true
-            endDelimiter: ;
-            sql: |
-              WITH RECURSIVE roots AS (
-                SELECT id, id AS root_id
-                FROM budget_items
-                WHERE previous_budget_item_id IS NULL
-                UNION ALL
-                SELECT b.id, r.root_id
-                FROM budget_items b
-                JOIN roots r ON b.previous_budget_item_id = r.id
-              )
-              UPDATE budget_items b
-              SET root_budget_item_id = roots.root_id
-              FROM roots
-              WHERE b.id = roots.id;
-
-  - changeSet:
-      id: 011c-fix-budget-items-root-by-person
-      author: codex
-      preConditions:
-        onFail: MARK_RAN
-        onError: MARK_RAN
-        columnExists:
-          tableName: budget_items
-          columnName: root_budget_item_id
-      changes:
-        - sql:
-            splitStatements: true
-            endDelimiter: ;
-            sql: |
-              UPDATE budget_items
-              SET root_budget_item_id = NULL;
-
-              WITH RECURSIVE roots AS (
-                SELECT
-                  id,
-                  person_id,
-                  type,
-                  name,
-                  frequency,
-                  id AS root_id
-                FROM budget_items
-                WHERE previous_budget_item_id IS NULL
-                UNION ALL
-                SELECT
-                  b.id,
-                  b.person_id,
-                  b.type,
-                  b.name,
-                  b.frequency,
-                  r.root_id
-                FROM budget_items b
-                JOIN roots r
-                  ON b.previous_budget_item_id = r.id
-                  AND b.type = r.type
-                  AND b.name = r.name
-                  AND b.frequency = r.frequency
-                  AND b.person_id IS NOT DISTINCT FROM r.person_id
-              )
-              UPDATE budget_items b
-              SET root_budget_item_id = CASE
-                WHEN roots.root_id = b.id THEN NULL
-                ELSE roots.root_id
-              END
-              FROM roots
-              WHERE b.id = roots.id;
-
-  - changeSet:
-      id: 011d-root-budget-items-self
-      author: codex
-      preConditions:
-        onFail: MARK_RAN
-        onError: MARK_RAN
-        columnExists:
-          tableName: budget_items
-          columnName: root_budget_item_id
-      changes:
-        - sql:
-            splitStatements: true
-            endDelimiter: ;
-            sql: |
-              UPDATE budget_items
-              SET root_budget_item_id = id
-              WHERE root_budget_item_id IS NULL;
 
   - changeSet:
       id: 013-add-budget-item-suspensions
@@ -714,6 +483,20 @@ databaseChangeLog:
                   name: balance_date
 
   - changeSet:
+      id: 016-savings-accounts-owner-nullable
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        tableExists:
+          tableName: savings_accounts
+      changes:
+        - dropNotNullConstraint:
+            tableName: savings_accounts
+            columnName: owner_person_id
+            columnDataType: BIGINT
+
+  - changeSet:
       id: 017-add-person-auth-fields
       author: codex
       preConditions:
@@ -736,30 +519,6 @@ databaseChangeLog:
               - column:
                   name: password_salt
                   type: VARCHAR(64)
-        - sql:
-            splitStatements: true
-            endDelimiter: ;
-            sql: |
-              WITH base AS (
-                SELECT
-                  id,
-                  lower(regexp_replace(name, '\\s+', '', 'g')) AS base_username
-                FROM persons
-              ),
-              numbered AS (
-                SELECT
-                  id,
-                  base_username,
-                  row_number() OVER (PARTITION BY base_username ORDER BY id) AS rn
-                FROM base
-              )
-              UPDATE persons p
-              SET username = CASE
-                WHEN numbered.rn = 1 THEN numbered.base_username
-                ELSE numbered.base_username || numbered.rn
-              END
-              FROM numbered
-              WHERE p.id = numbered.id;
         - addNotNullConstraint:
             tableName: persons
             columnName: username
@@ -770,15 +529,20 @@ databaseChangeLog:
             constraintName: uq_persons_username
 
   - changeSet:
-      id: 016-savings-accounts-owner-nullable
+      id: 004b-seed-default-persons
       author: codex
       preConditions:
         onFail: MARK_RAN
         onError: MARK_RAN
-        tableExists:
-          tableName: savings_accounts
+        sqlCheck:
+          expectedResult: 0
+          sql: SELECT COUNT(*) FROM persons
       changes:
-        - dropNotNullConstraint:
-            tableName: savings_accounts
-            columnName: owner_person_id
-            columnDataType: BIGINT
+        - sql:
+            splitStatements: true
+            endDelimiter: ;
+            sql: |
+              INSERT INTO persons (name, username)
+              VALUES
+                ('Person 1', 'person1'),
+                ('Person 2', 'person2');
