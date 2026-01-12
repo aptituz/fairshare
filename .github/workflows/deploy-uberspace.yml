@@ -79,6 +79,7 @@ jobs:
           host: ${{ secrets.UBERSPACE_HOST }}
           username: ${{ secrets.UBERSPACE_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: FAIRSHARE_BACKEND_PORT,FAIRSHARE_DB_URL,FAIRSHARE_DB_USERNAME,FAIRSHARE_DB_PASSWORD,FAIRSHARE_JWT_SECRET,FAIRSHARE_CORS_ALLOWED_ORIGINS
           script: |
             cat > ~/etc/services.d/fairshare-backend.ini <<EOF
             [program:fairshare-backend]
