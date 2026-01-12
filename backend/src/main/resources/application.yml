@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/fairshare
-    username: fairshare
-    password: fairshare
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/fairshare}
+    username: ${SPRING_DATASOURCE_USERNAME:fairshare}
+    password: ${SPRING_DATASOURCE_PASSWORD:fairshare}
   jpa:
     hibernate:
       ddl-auto: none
@@ -11,10 +11,15 @@ spring:
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
 server:
-  port: 8080
+  port: ${PORT:8080}
+  servlet:
+    context-path: ${FAIRSHARE_CONTEXT_PATH:/fairshare}
 springdoc:
   swagger-ui:
     path: /swagger-ui
 jwt:
-  secret: change-me-change-me-change-me-change-me
-  expirationMinutes: 720
+  secret: ${JWT_SECRET:change-me-change-me-change-me-change-me}
+  expirationMinutes: ${JWT_EXPIRATION_MINUTES:720}
+fairshare:
+  cors:
+    allowed-origins: ${FAIRSHARE_CORS_ALLOWED_ORIGINS:http://localhost:5173}
