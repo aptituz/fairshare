@@ -20,7 +20,10 @@ jobs:
 
       - name: Build backend
         working-directory: backend
-        run: ./gradlew bootJar -x test
+        run: |
+          ./gradlew bootJar -x test
+          jar_path=$(ls build/libs/*.jar | head -n 1)
+          cp "$jar_path" ../backend.jar
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -97,7 +100,7 @@ jobs:
           host: ${{ secrets.UBERSPACE_HOST }}
           username: ${{ secrets.UBERSPACE_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: backend/build/libs/*.jar
+          source: backend.jar
           target: ~/fairshare
 
       - name: Upload frontend assets
@@ -117,6 +120,4 @@ jobs:
           username: ${{ secrets.UBERSPACE_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            latest_jar=$(ls -t ~/fairshare/*.jar | head -n 1)
-            mv "$latest_jar" ~/fairshare/backend.jar
             supervisorctl restart fairshare-backend
