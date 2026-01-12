@@ -12,7 +12,7 @@ version = "0.0.1-SNAPSHOT"
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(18))
+        languageVersion.set(JavaLanguageVersion.of(21))
     }
 }
 
@@ -38,6 +38,18 @@ dependencies {
     runtimeOnly("com.mysql:mysql-connector-j:9.4.0")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+}
+
+
+
+tasks.withType<JavaCompile> {
+    options.release.set(18)
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_18)
+    }
 }
 
 tasks.withType<Test> {
