@@ -18,8 +18,8 @@ class CostSplitCalculatorTest {
     @Test
     fun `calculate should return correct split for a typical scenario`() {
         // ARRANGE
-        val person1 = Person(id = 1L, name = "Alice")
-        val person2 = Person(id = 2L, name = "Bob")
+        val person1 = Person(id = 1L, name = "Alice", username = "alice")
+        val person2 = Person(id = 2L, name = "Bob", username = "bob")
         val persons = listOf(person1, person2)
 
         val personalIncomeTotals = mapOf<Long?, BigDecimal>(

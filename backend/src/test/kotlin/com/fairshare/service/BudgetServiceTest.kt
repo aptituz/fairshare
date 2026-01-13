@@ -50,7 +50,7 @@ class BudgetServiceTest {
         val monthEnd = month.atEndOfMonth()
         val incomeItems = listOf(BudgetItem(id = 1, name = "Salary", type = BudgetItemType.INCOME, amount = BigDecimal.TEN, category = Category(1, "cat", BudgetItemType.INCOME, 1), startDate = LocalDate.now()))
         val expenseItems = listOf(BudgetItem(id = 2, name = "Rent", type = BudgetItemType.EXPENSE, amount = BigDecimal.ONE, category = Category(2, "cat", BudgetItemType.EXPENSE, 2), startDate = LocalDate.now()))
-        val persons = listOf(Person(1, "Person 1"))
+        val persons = listOf(Person(1, "Person 1", "person1"))
         val expectedResponse = MonthlySummaryResponse(
             totalHouseholdIncome = BigDecimal.TEN,
             totalHouseholdIncomeRecurring = BigDecimal.TEN,

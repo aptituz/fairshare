@@ -19,8 +19,8 @@ class MonthlySummaryCalculatorTest {
 
     @Test
     fun `case A uses personal cost share when usable income exceeds cost share`() {
-        val personA = Person(id = 1, name = "Alex")
-        val personB = Person(id = 2, name = "Bo")
+        val personA = Person(id = 1, name = "Alex", username = "alex")
+        val personB = Person(id = 2, name = "Bo", username = "bo")
 
         val incomeItems =
             listOf(
@@ -53,8 +53,8 @@ class MonthlySummaryCalculatorTest {
 
     @Test
     fun `case B contributes usable income when cost share exceeds usable income`() {
-        val personA = Person(id = 1, name = "Alex")
-        val personB = Person(id = 2, name = "Bo")
+        val personA = Person(id = 1, name = "Alex", username = "alex")
+        val personB = Person(id = 2, name = "Bo", username = "bo")
 
         val incomeItems =
             listOf(
@@ -96,7 +96,6 @@ class MonthlySummaryCalculatorTest {
             amount = BigDecimal(amount),
             type = type,
             frequency = Frequency.MONTHLY,
-            active = true,
             planned = true,
             categoryCorrection = false,
             startDate = LocalDate.of(2025, 3, 1),

@@ -40,7 +40,7 @@ class PersonServiceTest {
             Person(1, "Person 1", "person1"),
             Person(2, "Person 2", "person2")
         )
-        `when`(personRepository.findAll()).thenReturn(persons)
+        `when`(personRepository.findAllByOrderByIdAsc()).thenReturn(persons)
 
         // when
         val result = personService.list()

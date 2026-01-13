@@ -29,7 +29,6 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.ArgumentMatchers.any
-import org.mockito.ArgumentMatchers.eq
 import org.mockito.ArgumentCaptor
 import org.mockito.InjectMocks
 import org.mockito.Mock
@@ -94,7 +93,7 @@ class BudgetItemServiceTest {
     fun `create should save and return a new budget item`() {
         // given
         val category = Category(1, "Category", BudgetItemType.INCOME, 1)
-        val person = Person(1, "Person")
+        val person = Person(1, "Person", "person")
         val request = CreateBudgetItemRequest(
             name = "New Item",
             amount = BigDecimal.TEN,
@@ -157,7 +156,7 @@ class BudgetItemServiceTest {
         // given
         val budgetItem = BudgetItem(id = 1, name = "Old Item", amount = BigDecimal.ONE, type = BudgetItemType.INCOME, startDate = LocalDate.now())
         val category = Category(1, "Category", BudgetItemType.INCOME, 1)
-        val person = Person(1, "Person")
+        val person = Person(1, "Person", "person")
         val request = UpdateBudgetItemRequest(
             name = "Updated Item",
             amount = BigDecimal.TEN,
@@ -302,9 +301,16 @@ class BudgetItemServiceTest {
             startDate = LocalDate.of(2025, 1, 1),
             endDate = LocalDate.of(2025, 12, 31)
         )
+        item.rootBudgetItem = item
         val request = SuspendBudgetItemRequest(startMonth = "2025-05", endMonth = "2025-06")
         `when`(budgetItemRepository.findById(7)).thenReturn(java.util.Optional.of(item))
-        `when`(budgetItemSuspensionRepository.existsOverlapping(eq(7L), eq(LocalDate.of(2025, 5, 1)), eq(LocalDate.of(2025, 6, 30))))
+        `when`(
+            budgetItemSuspensionRepository.existsOverlapping(
+                7L,
+                LocalDate.of(2025, 5, 1),
+                LocalDate.of(2025, 6, 30)
+            )
+        )
             .thenReturn(false)
         `when`(budgetItemSuspensionRepository.save(any(BudgetItemSuspension::class.java)))
             .thenAnswer { it.arguments[0] as BudgetItemSuspension }
@@ -397,13 +403,6 @@ class BudgetItemServiceTest {
             endMonth = "2025-08"
         )
         `when`(budgetItemRepository.findById(4)).thenReturn(java.util.Optional.of(item))
-        `when`(
-            budgetItemRepository.findEffectiveByRootForMonth(
-                4L,
-                LocalDate.of(2025, 6, 1),
-                LocalDate.of(2025, 6, 30)
-            )
-        ).thenReturn(item)
         `when`(budgetItemRepository.save(any(BudgetItem::class.java))).thenAnswer { it.arguments[0] as BudgetItem }
 
         val result = budgetItemService.changeValueForPeriod(4, request)
