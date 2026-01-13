@@ -132,7 +132,7 @@ SPDX-License-Identifier: GPL-3.0-only
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 
 const props = defineProps({
   savingsAccounts: { type: Array, required: true },
@@ -212,9 +212,36 @@ const deleteAccount = async (id) => {
 };
 
 const openAccountDialog = () => {
-  newStartDate.value = props.summaryMonth ? `${props.summaryMonth}-01` : "";
   accountDialogOpen.value = true;
 };
+
+const defaultStartDate = computed(() =>
+  props.summaryMonth ? `${props.summaryMonth}-01` : ""
+);
+
+watch(
+  () => props.summaryMonth,
+  (value, previous) => {
+    if (!accountDialogOpen.value) {
+      return;
+    }
+    const previousDefault = previous ? `${previous}-01` : "";
+    const nextDefault = value ? `${value}-01` : "";
+    if (!newStartDate.value || newStartDate.value === previousDefault) {
+      newStartDate.value = nextDefault;
+    }
+  }
+);
+
+watch(accountDialogOpen, (open) => {
+  if (!open) {
+    return;
+  }
+  newAccountName.value = "";
+  newOwnerId.value = null;
+  newStartDate.value = defaultStartDate.value;
+  newEndDate.value = "";
+});
 
 const formatDate = (value) => {
   if (!value) {
