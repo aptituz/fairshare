@@ -546,3 +546,24 @@ databaseChangeLog:
               VALUES
                 ('Person 1', 'person1'),
                 ('Person 2', 'person2');
+
+  - changeSet:
+      id: 018-add-savings-account-dates
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        tableExists:
+          tableName: savings_accounts
+      changes:
+        - addColumn:
+            tableName: savings_accounts
+            columns:
+              - column:
+                  name: start_date
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: end_date
+                  type: DATE

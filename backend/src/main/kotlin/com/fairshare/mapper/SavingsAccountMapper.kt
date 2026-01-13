@@ -13,4 +13,6 @@ fun SavingsAccount.toResponse(): SavingsAccountResponse =
         id = id,
         name = name,
         owner = owner?.toResponse(),
+        startDate = startDate,
+        endDate = endDate,
     )

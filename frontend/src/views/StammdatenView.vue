@@ -57,6 +57,7 @@ SPDX-License-Identifier: GPL-3.0-only
         <SavingsAccountManagementCard
           :savingsAccounts="savingsAccounts"
           :persons="persons"
+          :summaryMonth="summaryMonth"
           :createSavingsAccount="createSavingsAccount"
           :updateSavingsAccount="updateSavingsAccount"
           :deleteSavingsAccount="deleteSavingsAccount"
@@ -77,6 +78,7 @@ const props = defineProps({
   expenseCategoryOptions: { type: Array, required: true },
   persons: { type: Array, required: true },
   savingsAccounts: { type: Array, required: true },
+  summaryMonth: { type: String, required: true },
   categorySaving: { type: Boolean, required: true },
   personSaving: { type: Boolean, required: true },
   createCategory: { type: Function, required: true },

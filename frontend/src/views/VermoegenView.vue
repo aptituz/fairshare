@@ -37,7 +37,7 @@ SPDX-License-Identifier: GPL-3.0-only
           <v-btn color="primary" v-bind="props">Aktionen</v-btn>
         </template>
         <v-list density="compact">
-          <v-list-item @click="balanceDialogOpen = true">
+          <v-list-item @click="openCreateBalanceDialog">
             <v-list-item-title>Kontostand erfassen</v-list-item-title>
           </v-list-item>
           <v-list-item @click="openBulkDialog">
@@ -117,7 +117,7 @@ SPDX-License-Identifier: GPL-3.0-only
           <v-select
             v-model="selectedAccountId"
             label="Sparkonto"
-            :items="savingsAccounts"
+            :items="availableAccounts"
             item-title="name"
             item-value="id"
           />
@@ -191,6 +191,7 @@ ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, Tooltip,
 
 const props = defineProps({
   savingsAccounts: { type: Array, required: true },
+  summaryMonth: { type: String, required: true },
   fetchWealthSummary: { type: Function, required: true },
   fetchWealthBalances: { type: Function, required: true },
   createSavingsAccountBalance: { type: Function, required: true },
@@ -216,6 +217,7 @@ const editingBalanceId = ref(null);
 const bulkDialogOpen = ref(false);
 const bulkDate = ref("");
 const bulkBalances = ref([]);
+const defaultBalanceDate = ref(`${props.summaryMonth}-01`);
 
 const loadSummary = async () => {
   summaryData.value = await props.fetchWealthSummary(fromMonth.value, toMonth.value);
@@ -300,6 +302,42 @@ const accountName = (accountId) => {
   return match?.name || "Unbekannt";
 };
 
+const toDateValue = (value) => {
+  if (!value) {
+    return null;
+  }
+  return new Date(`${value}T00:00:00`);
+};
+
+const isAccountActiveForDate = (account, dateValue) => {
+  if (!account) {
+    return false;
+  }
+  const start = account.startDate ? toDateValue(account.startDate) : null;
+  const end = account.endDate ? toDateValue(account.endDate) : null;
+  const date = toDateValue(dateValue);
+  if (!date) {
+    return true;
+  }
+  if (start && date < start) {
+    return false;
+  }
+  if (end && date > end) {
+    return false;
+  }
+  return true;
+};
+
+const availableAccounts = computed(() => {
+  const dateValue = balanceDate.value || defaultBalanceDate.value;
+  return props.savingsAccounts.filter((account) => isAccountActiveForDate(account, dateValue));
+});
+
+const availableBulkAccounts = computed(() => {
+  const dateValue = bulkDate.value || defaultBalanceDate.value;
+  return props.savingsAccounts.filter((account) => isAccountActiveForDate(account, dateValue));
+});
+
 const balanceLabel = (balance) => {
   if (balance.isCarried) {
     return `Vortrag ${balance.sourceDate}`;
@@ -322,6 +360,7 @@ const groupedBalances = computed(() => {
     const monthEnd = monthToEndDate(month);
     const carried = props.savingsAccounts
       .filter((account) => account?.id)
+      .filter((account) => isAccountActiveForDate(account, monthEnd))
       .map((account) => {
         const existing = items.find((entry) => entry.savingsAccountId === account.id);
         if (existing) {
@@ -398,13 +437,61 @@ const deleteBalance = async (balance) => {
 };
 
 const openBulkDialog = () => {
-  bulkBalances.value = props.savingsAccounts.map((account) => ({
+  bulkBalances.value = availableBulkAccounts.value.map((account) => ({
     savingsAccountId: account.id,
     balanceAmount: ""
   }));
-  bulkDate.value = "";
+  bulkDate.value = defaultBalanceDate.value;
   bulkDialogOpen.value = true;
 };
+
+const openCreateBalanceDialog = () => {
+  balanceDate.value = defaultBalanceDate.value;
+  balanceDialogOpen.value = true;
+};
+
+const syncBulkBalances = () => {
+  const accounts = availableBulkAccounts.value;
+  const existing = new Map(bulkBalances.value.map((entry) => [entry.savingsAccountId, entry]));
+  bulkBalances.value = accounts.map((account) => {
+    const prior = existing.get(account.id);
+    return {
+      savingsAccountId: account.id,
+      balanceAmount: prior?.balanceAmount ?? ""
+    };
+  });
+};
+
+watch([bulkDate, bulkDialogOpen], ([, open]) => {
+  if (open) {
+    syncBulkBalances();
+  }
+});
+
+watch(balanceDate, () => {
+  if (!selectedAccountId.value) {
+    return;
+  }
+  if (!availableAccounts.value.find((account) => account.id === selectedAccountId.value)) {
+    selectedAccountId.value = null;
+  }
+});
+
+watch(
+  () => props.summaryMonth,
+  (value, previous) => {
+    const nextDefault = value ? `${value}-01` : formatMonth(now) + "-01";
+    const previousDefault = previous ? `${previous}-01` : defaultBalanceDate.value;
+    defaultBalanceDate.value = nextDefault;
+    if (balanceDialogOpen.value && balanceDate.value === previousDefault) {
+      balanceDate.value = nextDefault;
+    }
+    if (bulkDialogOpen.value && bulkDate.value === previousDefault) {
+      bulkDate.value = nextDefault;
+    }
+  },
+  { immediate: true }
+);
 
 const submitBalance = async () => {
   const success = await props.createSavingsAccountBalance(

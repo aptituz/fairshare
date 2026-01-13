@@ -9,4 +9,6 @@ data class SavingsAccountResponse(
     val id: Long?,
     val name: String,
     val owner: PersonResponse?,
+    val startDate: java.time.LocalDate?,
+    val endDate: java.time.LocalDate?,
 )

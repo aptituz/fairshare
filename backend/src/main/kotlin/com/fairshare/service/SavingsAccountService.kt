@@ -29,13 +29,26 @@ class SavingsAccountService(
         if (name.isBlank()) {
             throw BadRequestException("Savings account name cannot be blank")
         }
+        val startDate = request.startDate
+        val endDate = request.endDate
+        if (startDate != null && endDate != null && endDate.isBefore(startDate)) {
+            throw BadRequestException("End date must be after start date")
+        }
         val owner =
             request.ownerId?.let { ownerId ->
                 personRepository.findById(ownerId).orElseThrow {
                     NotFoundException("Person $ownerId not found")
                 }
             }
-        val saved = savingsAccountRepository.save(SavingsAccount(name = name, owner = owner))
+        val saved =
+            savingsAccountRepository.save(
+                SavingsAccount(
+                    name = name,
+                    owner = owner,
+                    startDate = startDate,
+                    endDate = endDate,
+                ),
+            )
         return saved.toResponse()
     }
 
@@ -51,6 +64,11 @@ class SavingsAccountService(
         if (name.isBlank()) {
             throw BadRequestException("Savings account name cannot be blank")
         }
+        val startDate = request.startDate
+        val endDate = request.endDate
+        if (startDate != null && endDate != null && endDate.isBefore(startDate)) {
+            throw BadRequestException("End date must be after start date")
+        }
         val owner =
             request.ownerId?.let { ownerId ->
                 personRepository.findById(ownerId).orElseThrow {
@@ -59,6 +77,8 @@ class SavingsAccountService(
             }
         account.name = name
         account.owner = owner
+        account.startDate = startDate
+        account.endDate = endDate
         return savingsAccountRepository.save(account).toResponse()
     }
 

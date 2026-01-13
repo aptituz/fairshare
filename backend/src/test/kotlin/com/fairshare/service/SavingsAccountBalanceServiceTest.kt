@@ -39,7 +39,12 @@ class SavingsAccountBalanceServiceTest {
     @Test
     fun `monthlySummary should include expected balance based on household budget balances`() {
         val accountA = SavingsAccount(id = 1, name = "A")
-        val accountB = SavingsAccount(id = 2, name = "B")
+        val accountB = SavingsAccount(
+            id = 2,
+            name = "B",
+            startDate = LocalDate.of(2025, 2, 1),
+            endDate = LocalDate.of(2025, 2, 28)
+        )
         val from = YearMonth.of(2025, 1)
         val to = YearMonth.of(2025, 3)
 
@@ -109,7 +114,7 @@ class SavingsAccountBalanceServiceTest {
         assertEquals(BigDecimal("80.00"), result[0].expectedBalance)
         assertEquals(BigDecimal("300.00"), result[1].totalBalance)
         assertEquals(BigDecimal("90.00"), result[1].expectedBalance)
-        assertEquals(BigDecimal("350.00"), result[2].totalBalance)
+        assertEquals(BigDecimal("150.00"), result[2].totalBalance)
         assertEquals(BigDecimal("85.00"), result[2].expectedBalance)
     }
 }

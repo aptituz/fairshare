@@ -59,6 +59,7 @@ SPDX-License-Identifier: GPL-3.0-only
     <VermoegenView
       v-else-if="currentView === 'vermoegen'"
       :savingsAccounts="savingsAccounts"
+      :summaryMonth="summaryMonth"
       :fetchWealthSummary="fetchWealthSummary"
       :fetchWealthBalances="fetchWealthBalances"
       :createSavingsAccountBalance="createSavingsAccountBalance"
@@ -98,6 +99,7 @@ SPDX-License-Identifier: GPL-3.0-only
       :expenseCategoryOptions="expenseCategoryOptions"
       :persons="persons"
       :savingsAccounts="savingsAccounts"
+      :summaryMonth="summaryMonth"
       :categorySaving="categorySaving"
       :personSaving="personSaving"
       :createCategory="createCategory"

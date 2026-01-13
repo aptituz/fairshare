@@ -146,6 +146,7 @@ class SavingsAccountBalanceService(
         var expectedBalance = startingTotal
 
         return months.map { month ->
+            val monthStart = month.atDay(1)
             val monthEnd = month.atEndOfMonth()
             accountIds.forEach { accountId ->
                 val items = balancesByAccount[accountId].orEmpty()
@@ -156,7 +157,20 @@ class SavingsAccountBalanceService(
                 }
                 indices[accountId] = index
             }
-            val total = currentAmounts.values.fold(BigDecimal.ZERO) { acc, value -> acc.add(value) }
+            val activeAccountIds =
+                accounts
+                    .filter { account ->
+                        val startOk = account.startDate == null || !account.startDate!!.isAfter(monthEnd)
+                        val endOk = account.endDate == null || !account.endDate!!.isBefore(monthStart)
+                        startOk && endOk
+                    }
+                    .mapNotNull { it.id }
+                    .toSet()
+            val total =
+                currentAmounts
+                    .filter { (accountId, _) -> activeAccountIds.contains(accountId) }
+                    .values
+                    .fold(BigDecimal.ZERO) { acc, value -> acc.add(value) }
             val monthlyBalance = householdBalances[month.toString()] ?: BigDecimal.ZERO
             val response =
                 SavingsAccountBalanceSummaryResponse(

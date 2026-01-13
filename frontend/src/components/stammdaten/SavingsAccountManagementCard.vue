@@ -13,7 +13,7 @@ SPDX-License-Identifier: GPL-3.0-only
           <v-btn color="primary" v-bind="props">Aktionen</v-btn>
         </template>
         <v-list density="compact">
-          <v-list-item @click="accountDialogOpen = true">
+          <v-list-item @click="openAccountDialog">
             <v-list-item-title>Konto hinzufuegen</v-list-item-title>
           </v-list-item>
         </v-list>
@@ -38,6 +38,21 @@ SPDX-License-Identifier: GPL-3.0-only
               density="compact"
               hide-details
             />
+          <v-text-field
+            v-model="editingStartDate"
+            label="Startdatum"
+            type="date"
+            density="compact"
+            hide-details
+            required
+          />
+          <v-text-field
+            v-model="editingEndDate"
+            label="Enddatum"
+            type="date"
+            density="compact"
+            hide-details
+          />
           <div class="d-flex ga-2 mt-2">
             <v-btn size="small" color="primary" @click="saveAccountEdit(account.id)">
               Speichern
@@ -55,6 +70,9 @@ SPDX-License-Identifier: GPL-3.0-only
           </v-list-item-title>
           <v-list-item-subtitle>
             {{ account.owner?.name || "Gemeinsam" }}
+          </v-list-item-subtitle>
+          <v-list-item-subtitle v-if="account.startDate || account.endDate">
+            {{ accountDateLabel(account) }}
           </v-list-item-subtitle>
         </template>
         <template #append>
@@ -90,6 +108,17 @@ SPDX-License-Identifier: GPL-3.0-only
               item-title="name"
               item-value="id"
             />
+            <v-text-field
+              v-model="newStartDate"
+              label="Startdatum"
+              type="date"
+              required
+            />
+            <v-text-field
+              v-model="newEndDate"
+              label="Enddatum"
+              type="date"
+            />
           </v-form>
         </v-card-text>
         <v-card-actions>
@@ -110,6 +139,7 @@ const props = defineProps({
   persons: { type: Array, required: true },
   createSavingsAccount: { type: Function, required: true },
   updateSavingsAccount: { type: Function, required: true },
+  summaryMonth: { type: String, required: true },
   deleteSavingsAccount: { type: Function, required: true }
 });
 
@@ -120,16 +150,27 @@ const ownerOptions = computed(() => [
 
 const newAccountName = ref("");
 const newOwnerId = ref(null);
+const newStartDate = ref("");
+const newEndDate = ref("");
 const accountDialogOpen = ref(false);
 const editingAccountId = ref(null);
 const editingAccountName = ref("");
 const editingOwnerId = ref(null);
+const editingStartDate = ref("");
+const editingEndDate = ref("");
 
 const submitAccount = async () => {
-  const success = await props.createSavingsAccount(newAccountName.value, newOwnerId.value);
+  const success = await props.createSavingsAccount(
+    newAccountName.value,
+    newOwnerId.value,
+    newStartDate.value,
+    newEndDate.value
+  );
   if (success) {
     newAccountName.value = "";
     newOwnerId.value = null;
+    newStartDate.value = "";
+    newEndDate.value = "";
     accountDialogOpen.value = false;
   }
 };
@@ -138,16 +179,26 @@ const startAccountEdit = (account) => {
   editingAccountId.value = account.id;
   editingAccountName.value = account.name;
   editingOwnerId.value = account.owner?.id ?? null;
+  editingStartDate.value = formatDate(account.startDate);
+  editingEndDate.value = formatDate(account.endDate);
 };
 
 const cancelAccountEdit = () => {
   editingAccountId.value = null;
   editingAccountName.value = "";
   editingOwnerId.value = null;
+  editingStartDate.value = "";
+  editingEndDate.value = "";
 };
 
 const saveAccountEdit = async (id) => {
-  const success = await props.updateSavingsAccount(id, editingAccountName.value, editingOwnerId.value);
+  const success = await props.updateSavingsAccount(
+    id,
+    editingAccountName.value,
+    editingOwnerId.value,
+    editingStartDate.value,
+    editingEndDate.value
+  );
   if (success) {
     cancelAccountEdit();
   }
@@ -158,5 +209,23 @@ const deleteAccount = async (id) => {
     return;
   }
   await props.deleteSavingsAccount(id);
+};
+
+const openAccountDialog = () => {
+  newStartDate.value = props.summaryMonth ? `${props.summaryMonth}-01` : "";
+  accountDialogOpen.value = true;
+};
+
+const formatDate = (value) => {
+  if (!value) {
+    return "";
+  }
+  return String(value).slice(0, 10);
+};
+
+const accountDateLabel = (account) => {
+  const start = formatDate(account.startDate) || "offen";
+  const end = formatDate(account.endDate) || "offen";
+  return `Gueltig: ${start} – ${end}`;
 };
 </script>

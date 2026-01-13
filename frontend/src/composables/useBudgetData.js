@@ -288,9 +288,13 @@ export const useBudgetData = () => {
     }
   };
 
-  const createSavingsAccount = async (name, ownerId) => {
+  const createSavingsAccount = async (name, ownerId, startDate, endDate) => {
     if (!name.trim()) {
       error.value = "Bitte einen gueltigen Namen angeben.";
+      return false;
+    }
+    if (!startDate) {
+      error.value = "Bitte ein Startdatum angeben.";
       return false;
     }
     error.value = "";
@@ -298,7 +302,12 @@ export const useBudgetData = () => {
       await request("/api/savings-accounts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), ownerId })
+        body: JSON.stringify({
+          name: name.trim(),
+          ownerId,
+          startDate,
+          endDate: endDate || null
+        })
       });
       await refreshAll();
       return true;
@@ -308,9 +317,13 @@ export const useBudgetData = () => {
     }
   };
 
-  const updateSavingsAccount = async (id, name, ownerId) => {
+  const updateSavingsAccount = async (id, name, ownerId, startDate, endDate) => {
     if (!name.trim()) {
       error.value = "Bitte einen gueltigen Namen angeben.";
+      return false;
+    }
+    if (!startDate) {
+      error.value = "Bitte ein Startdatum angeben.";
       return false;
     }
     error.value = "";
@@ -318,7 +331,12 @@ export const useBudgetData = () => {
       await request(`/api/savings-accounts/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), ownerId })
+        body: JSON.stringify({
+          name: name.trim(),
+          ownerId,
+          startDate,
+          endDate: endDate || null
+        })
       });
       await refreshAll();
       return true;
