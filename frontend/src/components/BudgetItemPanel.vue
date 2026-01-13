@@ -27,7 +27,7 @@ SPDX-License-Identifier: GPL-3.0-only
     <v-divider />
     <div v-if="showFrequencyTable">
       <div v-for="group in groupedBudgetItems" :key="group.key" class="mb-6">
-        <v-table density="compact">
+        <v-table density="compact" class="table-scroll">
           <thead>
             <tr>
               <th colspan="8" class="text-left text-subtitle-1 font-weight-bold">
@@ -536,7 +536,7 @@ SPDX-License-Identifier: GPL-3.0-only
                   aria-label="Budget-Posten Verlauf"
                 />
               </div>
-              <v-table density="compact">
+              <v-table density="compact" class="table-scroll">
                 <thead>
                   <tr>
                     <th class="text-left">Zeitraum</th>

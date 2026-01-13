@@ -66,7 +66,7 @@ SPDX-License-Identifier: GPL-3.0-only
         <v-card-text>
           <div v-for="group in groupedBalances" :key="group.month" class="mb-6">
             <div class="text-subtitle-1 font-weight-medium mb-2">{{ group.month }}</div>
-            <v-table density="compact">
+            <v-table density="compact" class="table-scroll">
               <thead>
                 <tr>
                   <th class="text-left">Datum</th>
@@ -139,7 +139,7 @@ SPDX-License-Identifier: GPL-3.0-only
       <v-card-text>
         <div class="d-flex flex-column ga-4">
           <v-text-field v-model="bulkDate" type="date" label="Datum" />
-          <v-table density="compact">
+          <v-table density="compact" class="table-scroll">
             <thead>
               <tr>
                 <th class="text-left">Sparkonto</th>
