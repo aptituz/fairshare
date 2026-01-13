@@ -15,10 +15,7 @@ SPDX-License-Identifier: GPL-3.0-only
         <v-img :src="logo" alt="Fairshare" max-height="80" max-width="248" contain class="w-100" />
       </div>
       <v-divider class="my-2" />
-      <div class="px-4 pb-4">
-        <MonthYearPicker :model-value="summaryMonth" @update:modelValue="updateMonth" />
-      </div>
-      <v-divider />
+      <div class="px-4 pb-4" />
       <v-list nav v-model:opened="openGroups">
         <v-list-item
           title="Overview"
@@ -101,7 +98,14 @@ SPDX-License-Identifier: GPL-3.0-only
           contain
         />
         <v-spacer v-if="!mdAndUp" />
-        <v-spacer v-else />
+        <div v-else class="app-bar__left">
+          <MonthYearPicker
+            :model-value="summaryMonth"
+            :show-arrows="true"
+            @update:modelValue="updateMonth"
+          />
+        </div>
+        <v-spacer />
         <v-menu v-if="currentUsername">
           <template #activator="{ props }">
             <v-btn icon v-bind="props">
@@ -123,6 +127,13 @@ SPDX-License-Identifier: GPL-3.0-only
           </v-list>
         </v-menu>
       </v-app-bar>
+      <v-sheet v-if="!mdAndUp" class="mobile-month-bar" color="surface">
+        <MonthYearPicker
+          :model-value="summaryMonth"
+          :show-arrows="true"
+          @update:modelValue="updateMonth"
+        />
+      </v-sheet>
       <v-container fluid :class="containerClasses">
         <slot />
       </v-container>

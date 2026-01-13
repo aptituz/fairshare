@@ -1,0 +1,7 @@
+RewriteEngine On
+RewriteBase /fairshare/
+
+RewriteRule ^api/ - [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /fairshare/index.html [L]

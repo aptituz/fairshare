@@ -443,6 +443,19 @@ select:focus {
 }
 
 @media (max-width: 600px) {
+  .mobile-month-bar {
+    padding: 0.75rem 1rem 0.9rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
+  .month-year-picker {
+    flex-wrap: wrap;
+  }
+
+  .month-year-picker__select {
+    min-width: 140px;
+  }
+
   .v-list-item-title,
   .v-list-item-subtitle,
   .v-card-subtitle {
@@ -460,5 +473,11 @@ select:focus {
 
   .table-scroll table {
     min-width: 560px;
+  }
+}
+
+@media (min-width: 960px) {
+  .app-bar__left {
+    min-width: 320px;
   }
 }

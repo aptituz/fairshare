@@ -4,7 +4,16 @@ SPDX-License-Identifier: GPL-3.0-only
 -->
 
 <template>
-  <div class="d-flex ga-2">
+  <div class="month-year-picker d-flex ga-2 align-center">
+    <v-btn
+      v-if="showArrows"
+      icon
+      size="small"
+      variant="text"
+      @click="shiftMonth(-1)"
+    >
+      <v-icon icon="mdi-chevron-left" />
+    </v-btn>
     <v-select
       v-model="selectedMonth"
       :items="monthOptions"
@@ -14,7 +23,7 @@ SPDX-License-Identifier: GPL-3.0-only
       density="compact"
       hide-details
       :clearable="clearable"
-      class="flex-grow-1"
+      class="flex-grow-1 month-year-picker__select"
     />
     <v-select
       v-model="selectedYear"
@@ -23,8 +32,17 @@ SPDX-License-Identifier: GPL-3.0-only
       density="compact"
       hide-details
       :clearable="clearable"
-      class="flex-grow-1"
+      class="flex-grow-1 month-year-picker__select"
     />
+    <v-btn
+      v-if="showArrows"
+      icon
+      size="small"
+      variant="text"
+      @click="shiftMonth(1)"
+    >
+      <v-icon icon="mdi-chevron-right" />
+    </v-btn>
   </div>
 </template>
 
@@ -37,7 +55,8 @@ const props = defineProps({
   yearLabel: { type: String, default: "Jahr" },
   yearRange: { type: Number, default: 5 },
   allowEmpty: { type: Boolean, default: false },
-  clearable: { type: Boolean, default: false }
+  clearable: { type: Boolean, default: false },
+  showArrows: { type: Boolean, default: false }
 });
 
 const emit = defineEmits(["update:modelValue"]);
@@ -84,6 +103,15 @@ const emitValue = () => {
     return;
   }
   emit("update:modelValue", `${yearValue}-${monthValue}`);
+};
+
+const shiftMonth = (delta) => {
+  const yearValue = selectedYear.value || currentYear;
+  const monthValue = selectedMonth.value || currentMonth;
+  const date = new Date(Number(yearValue), Number(monthValue) - 1, 1);
+  date.setMonth(date.getMonth() + delta);
+  selectedYear.value = date.getFullYear();
+  selectedMonth.value = String(date.getMonth() + 1).padStart(2, "0");
 };
 
 watch(
