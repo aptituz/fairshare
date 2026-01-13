@@ -146,4 +146,34 @@ interface BudgetItemRepository : JpaRepository<BudgetItem, Long> {
     fun findHistoryByRootId(
         @Param("rootId") rootId: Long,
     ): List<BudgetItem>
+
+    @Query(
+        """
+        select b
+        from BudgetItem b
+        where b.rootBudgetItem.id = :rootId
+          and b.startDate <= :monthEnd
+          and (b.endDate is null or b.endDate >= :monthStart)
+          and b.startDate = (
+            select max(b2.startDate)
+            from BudgetItem b2
+            where b2.rootBudgetItem.id = :rootId
+              and b2.startDate <= :monthEnd
+              and (b2.endDate is null or b2.endDate >= :monthStart)
+          )
+          and b.id = (
+            select max(b3.id)
+            from BudgetItem b3
+            where b3.rootBudgetItem.id = :rootId
+              and b3.startDate = b.startDate
+              and b3.startDate <= :monthEnd
+              and (b3.endDate is null or b3.endDate >= :monthStart)
+          )
+        """,
+    )
+    fun findEffectiveByRootForMonth(
+        @Param("rootId") rootId: Long,
+        @Param("monthStart") monthStart: LocalDate,
+        @Param("monthEnd") monthEnd: LocalDate,
+    ): BudgetItem?
 }

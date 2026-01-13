@@ -306,7 +306,7 @@ class BudgetItemService(
         id: Long,
         request: BudgetItemValueChangeRequest,
     ): BudgetItemResponse {
-        val budgetItem =
+        val baseItem =
             budgetItemRepository.findById(id).orElseThrow {
                 NotFoundException("Budget item $id not found")
             }
@@ -316,6 +316,13 @@ class BudgetItemService(
         if (endDate != null && endDate.isBefore(startDate)) {
             throw BadRequestException("End month must be after start month")
         }
+        val effectiveItem =
+            baseItem.rootBudgetItem?.id?.let { rootId ->
+                val monthStart = startMonth.atDay(1)
+                val monthEnd = startMonth.atEndOfMonth()
+                budgetItemRepository.findEffectiveByRootForMonth(rootId, monthStart, monthEnd)
+            } ?: baseItem
+        val budgetItem = effectiveItem ?: baseItem
         val originalEnd = budgetItem.endDate
         if (startDate.isBefore(budgetItem.startDate)) {
             throw BadRequestException("Change start must be within the item range")
