@@ -122,6 +122,32 @@ export const useBudgetData = () => {
     }
   };
 
+  const exportData = async () => {
+    error.value = "";
+    try {
+      return await request("/api/data/export");
+    } catch (err) {
+      error.value = err?.message || "Export fehlgeschlagen.";
+      return null;
+    }
+  };
+
+  const importData = async (payload) => {
+    error.value = "";
+    try {
+      await request("/api/data/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      await refreshAll();
+      return true;
+    } catch (err) {
+      error.value = err?.message || "Import fehlgeschlagen.";
+      return false;
+    }
+  };
+
   const fetchBudgetItems = async () => {
     const query = summaryMonth.value ? `?month=${summaryMonth.value}` : "";
     budgetItems.value = await request(`/api/budget-items${query}`);
@@ -800,6 +826,8 @@ export const useBudgetData = () => {
     fetchWealthBalances,
     createSavingsAccountBalance,
     deleteSavingsAccountBalance,
+    exportData,
+    importData,
     createSavingsAccountBalancesBulk,
     fetchYearlySummary,
     fetchMonthlySummaryForMonth,

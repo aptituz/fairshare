@@ -78,6 +78,11 @@ SPDX-License-Identifier: GPL-3.0-only
             :active="currentView === 'stammdaten' && currentSubView === 'savings-accounts'"
             @click="navigate('stammdaten', 'savings-accounts')"
           />
+          <v-list-item
+            title="Import / Export"
+            :active="currentView === 'stammdaten' && currentSubView === 'data-transfer'"
+            @click="navigate('stammdaten', 'data-transfer')"
+          />
         </v-list-group>
       </v-list>
       <v-divider class="my-2" />

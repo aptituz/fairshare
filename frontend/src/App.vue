@@ -111,6 +111,8 @@ SPDX-License-Identifier: GPL-3.0-only
       :createSavingsAccount="createSavingsAccount"
       :updateSavingsAccount="updateSavingsAccount"
       :deleteSavingsAccount="deleteSavingsAccount"
+      :exportData="exportData"
+      :importData="importData"
     />
   </AppShell>
 </template>
@@ -151,6 +153,8 @@ const {
   createSavingsAccount,
   updateSavingsAccount,
   deleteSavingsAccount,
+  exportData,
+  importData,
   fetchWealthSummary,
   fetchWealthBalances,
   createSavingsAccountBalance,
