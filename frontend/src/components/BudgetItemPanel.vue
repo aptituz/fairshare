@@ -76,6 +76,12 @@ SPDX-License-Identifier: GPL-3.0-only
                         Betrag aendern
                       </v-list-item-title>
                     </v-list-item>
+                    <v-list-item @click="openOneTimeDialog(budgetItem)">
+                      <v-list-item-title class="d-flex align-center ga-2">
+                        <v-icon icon="mdi-calendar-edit" size="small" />
+                        Betrag einmalig aendern
+                      </v-list-item-title>
+                    </v-list-item>
                     <v-list-item
                       v-if="canSuspend && !budgetItem.suspendedForMonth"
                       @click="openSuspendDialog(budgetItem)"
@@ -149,6 +155,12 @@ SPDX-License-Identifier: GPL-3.0-only
                     <v-list-item-title class="d-flex align-center ga-2">
                       <v-icon icon="mdi-swap-horizontal" size="small" />
                       Betrag aendern
+                    </v-list-item-title>
+                  </v-list-item>
+                  <v-list-item @click="openOneTimeDialog(budgetItem)">
+                    <v-list-item-title class="d-flex align-center ga-2">
+                      <v-icon icon="mdi-calendar-edit" size="small" />
+                      Betrag einmalig aendern
                     </v-list-item-title>
                   </v-list-item>
                   <v-list-item
@@ -351,6 +363,35 @@ SPDX-License-Identifier: GPL-3.0-only
           <v-spacer />
           <v-btn variant="text" @click="changeDialogOpen = false">Abbrechen</v-btn>
           <v-btn color="primary" @click="submitChange">Speichern</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+    <v-dialog v-model="oneTimeDialogOpen" max-width="520">
+      <v-card>
+        <v-card-title>Betrag einmalig aendern</v-card-title>
+        <v-card-text>
+          <div class="d-flex flex-column ga-2">
+            <v-text-field
+              v-model="oneTimeAmount"
+              label="Neuer Betrag"
+              type="number"
+              step="0.01"
+              min="0"
+              density="compact"
+              hide-details
+            />
+            <div class="text-caption">Monat</div>
+            <MonthYearPicker
+              :model-value="oneTimeMonth"
+              :year-range="20"
+              @update:modelValue="(value) => (oneTimeMonth = value)"
+            />
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="oneTimeDialogOpen = false">Abbrechen</v-btn>
+          <v-btn color="primary" @click="submitOneTimeChange">Speichern</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -642,7 +683,6 @@ const categoryId = ref(null);
 const categorySearch = ref("");
 const personId = ref(null);
 const frequency = ref("MONTHLY");
-const oneTimeMonth = ref("");
 const startMonth = ref(props.summaryMonth);
 const endMonth = ref("");
 const editingId = ref(null);
@@ -667,6 +707,10 @@ const changeItemId = ref(null);
 const changeAmount = ref("");
 const changeStartMonth = ref(props.summaryMonth);
 const changeEndMonth = ref("");
+const oneTimeDialogOpen = ref(false);
+const oneTimeItemId = ref(null);
+const oneTimeAmount = ref("");
+const oneTimeMonth = ref(props.summaryMonth);
 const resumeDialogOpen = ref(false);
 const resumeItemId = ref(null);
 const resumeStartMonth = ref(props.summaryMonth);
@@ -1014,6 +1058,9 @@ const updateEditingEndMonth = (value) => {
 };
 
 const openCreateDialog = () => {
+  startMonth.value = props.summaryMonth;
+  oneTimeMonth.value = props.summaryMonth;
+  endMonth.value = "";
   createDialogOpen.value = true;
 };
 
@@ -1036,6 +1083,13 @@ const openChangeDialog = (budgetItem) => {
   changeStartMonth.value = props.summaryMonth;
   changeEndMonth.value = "";
   changeDialogOpen.value = true;
+};
+
+const openOneTimeDialog = (budgetItem) => {
+  oneTimeItemId.value = budgetItem.id;
+  oneTimeAmount.value = budgetItem.amount;
+  oneTimeMonth.value = props.summaryMonth;
+  oneTimeDialogOpen.value = true;
 };
 
 const fetchHistory = async (sourceId) => {
@@ -1139,6 +1193,24 @@ const submitChange = async () => {
   }
 };
 
+const submitOneTimeChange = async () => {
+  if (!oneTimeItemId.value) {
+    return;
+  }
+  const success = await props.onChangeBudgetItemValue(
+    oneTimeItemId.value,
+    oneTimeAmount.value,
+    oneTimeMonth.value,
+    oneTimeMonth.value
+  );
+  if (success) {
+    oneTimeDialogOpen.value = false;
+    oneTimeItemId.value = null;
+    oneTimeAmount.value = "";
+    oneTimeMonth.value = props.summaryMonth;
+  }
+};
+
 const submitResume = async () => {
   if (!resumeItemId.value) {
     return;
@@ -1201,10 +1273,11 @@ const saveEditWithMode = async (id, overrideForMonth) => {
     return;
   }
   if (overrideForMonth) {
-    const success = await props.onOverrideBudgetItemForMonth(
+    const success = await props.onChangeBudgetItemValue(
       id,
+      editingAmount.value,
       props.summaryMonth,
-      editingAmount.value
+      props.summaryMonth
     );
     if (success) {
       cancelEdit();
