@@ -13,7 +13,7 @@ spring:
 server:
   port: ${PORT:8080}
   servlet:
-    context-path: ${FAIRSHARE_CONTEXT_PATH:/fairshare}
+    context-path: ${FAIRSHARE_CONTEXT_PATH:/}
 springdoc:
   swagger-ui:
     path: /swagger-ui
