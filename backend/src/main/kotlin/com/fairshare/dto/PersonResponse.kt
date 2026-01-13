@@ -9,4 +9,5 @@ data class PersonResponse(
     val id: Long?,
     val name: String,
     val username: String,
+    val hasPassword: Boolean,
 )

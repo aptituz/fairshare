@@ -7,7 +7,9 @@ package com.fairshare.controller
 
 import com.fairshare.dto.CreatePersonRequest
 import com.fairshare.dto.PersonResponse
+import com.fairshare.dto.SetPersonPasswordRequest
 import com.fairshare.dto.UpdatePersonRequest
+import com.fairshare.service.AuthService
 import com.fairshare.service.PersonService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -24,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController
 @Tag(name = "Persons", description = "Manage persons for shared budgets.")
 class PersonController(
     private val personService: PersonService,
+    private val authService: AuthService,
 ) {
     @GetMapping
     @Operation(summary = "List persons")
@@ -41,4 +44,13 @@ class PersonController(
         @PathVariable id: Long,
         @RequestBody request: UpdatePersonRequest,
     ): PersonResponse = personService.update(id, request)
+
+    @PostMapping("/{id}/password")
+    @Operation(summary = "Set a person's password")
+    fun setPassword(
+        @PathVariable id: Long,
+        @RequestBody request: SetPersonPasswordRequest,
+    ) {
+        authService.setPasswordForPerson(id, request.newPassword)
+    }
 }

@@ -37,8 +37,8 @@ class PersonServiceTest {
     fun `list should return all persons`() {
         // given
         val persons = listOf(
-            Person(1, "Person 1"),
-            Person(2, "Person 2")
+            Person(1, "Person 1", "person1"),
+            Person(2, "Person 2", "person2")
         )
         `when`(personRepository.findAll()).thenReturn(persons)
 
@@ -57,7 +57,7 @@ class PersonServiceTest {
     fun `create should save and return a new person`() {
         // given
         val request = CreatePersonRequest("New Person")
-        val person = Person(1, "New Person")
+        val person = Person(1, "New Person", "newperson")
         `when`(personRepository.save(any(Person::class.java))).thenReturn(person)
 
         // when
@@ -82,7 +82,7 @@ class PersonServiceTest {
     @Test
     fun `delete should remove a person when they are not used by budget items`() {
         // given
-        val person = Person(1, "Test Person")
+        val person = Person(1, "Test Person", "testperson")
         `when`(personRepository.findById(1)).thenReturn(java.util.Optional.of(person))
         `when`(budgetItemRepository.existsByPersonId(1)).thenReturn(false)
 
@@ -96,7 +96,7 @@ class PersonServiceTest {
     @Test
     fun `delete should throw an exception when person is used by budget items`() {
         // given
-        val person = Person(1, "Test Person")
+        val person = Person(1, "Test Person", "testperson")
         `when`(personRepository.findById(1)).thenReturn(java.util.Optional.of(person))
         `when`(budgetItemRepository.existsByPersonId(1)).thenReturn(true)
 

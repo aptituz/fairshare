@@ -39,6 +39,7 @@ SPDX-License-Identifier: GPL-3.0-only
           :personSaving="personSaving"
           :createPerson="createPerson"
           :updatePerson="updatePerson"
+          :setPersonPassword="setPersonPassword"
         />
       </v-col>
     </v-row>
@@ -83,6 +84,7 @@ const props = defineProps({
   deleteCategory: { type: Function, required: true },
   createPerson: { type: Function, required: true },
   updatePerson: { type: Function, required: true },
+  setPersonPassword: { type: Function, required: true },
   createSavingsAccount: { type: Function, required: true },
   updateSavingsAccount: { type: Function, required: true },
   deleteSavingsAccount: { type: Function, required: true }

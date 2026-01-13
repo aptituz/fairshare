@@ -13,4 +13,5 @@ fun Person.toResponse(): PersonResponse =
         id = id,
         name = name,
         username = username,
+        hasPassword = !passwordHash.isNullOrBlank(),
     )

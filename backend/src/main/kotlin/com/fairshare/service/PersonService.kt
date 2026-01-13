@@ -23,7 +23,7 @@ class PersonService(
     private val budgetItemRepository: BudgetItemRepository
 ) {
     private val log = org.slf4j.LoggerFactory.getLogger(PersonService::class.java)
-    fun list(): List<PersonResponse> = personRepository.findAll().map { it.toResponse() }
+    fun list(): List<PersonResponse> = personRepository.findAllByOrderByIdAsc().map { it.toResponse() }
 
     fun create(request: CreatePersonRequest): PersonResponse {
         val name = request.name.trim()
@@ -44,10 +44,18 @@ class PersonService(
                 NotFoundException("Person $id not found")
             }
         val name = request.name.trim()
+        val username = request.username.trim()
         if (name.isBlank()) {
             throw BadRequestException("Person name cannot be blank")
         }
+        if (username.isBlank()) {
+            throw BadRequestException("Username cannot be blank")
+        }
+        if (personRepository.existsByUsernameAndIdNot(username, id)) {
+            throw ConflictException("Username already exists")
+        }
         person.name = name
+        person.username = username
         return personRepository.save(person).toResponse()
     }
 

@@ -240,9 +240,13 @@ export const useBudgetData = () => {
     }
   };
 
-  const updatePerson = async (id, name) => {
+  const updatePerson = async (id, name, username) => {
     if (!name.trim()) {
       error.value = "Bitte einen gueltigen Personennamen angeben.";
+      return false;
+    }
+    if (!String(username || "").trim()) {
+      error.value = "Bitte einen gueltigen Benutzernamen angeben.";
       return false;
     }
     error.value = "";
@@ -250,13 +254,37 @@ export const useBudgetData = () => {
       await request(`/api/persons/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim() })
+        body: JSON.stringify({ name: name.trim(), username: String(username).trim() })
       });
       await refreshAll();
       return true;
     } catch (err) {
       error.value = err?.message || "Person konnte nicht aktualisiert werden.";
       return false;
+    }
+  };
+
+  const setPersonPassword = async (id, newPassword) => {
+    const trimmedPassword = String(newPassword || "").trim();
+    if (!trimmedPassword) {
+      error.value = "Bitte ein gueltiges Passwort angeben.";
+      return false;
+    }
+    personSaving.value = true;
+    error.value = "";
+    try {
+      await request(`/api/persons/${id}/password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newPassword: trimmedPassword })
+      });
+      await fetchPersons();
+      return true;
+    } catch (err) {
+      error.value = err?.message || "Passwort konnte nicht gesetzt werden.";
+      return false;
+    } finally {
+      personSaving.value = false;
     }
   };
 
@@ -746,6 +774,7 @@ export const useBudgetData = () => {
     deleteCategory,
     createPerson,
     updatePerson,
+    setPersonPassword,
     createSavingsAccount,
     updateSavingsAccount,
     deleteSavingsAccount,

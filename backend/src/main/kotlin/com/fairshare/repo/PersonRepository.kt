@@ -11,6 +11,13 @@ import org.springframework.data.jpa.repository.JpaRepository
 interface PersonRepository : JpaRepository<Person, Long> {
     fun existsByUsername(username: String): Boolean
 
+    fun existsByUsernameAndIdNot(
+        username: String,
+        id: Long,
+    ): Boolean
+
+    fun findAllByOrderByIdAsc(): List<Person>
+
     fun findByUsername(username: String): Person?
 
     fun existsByPasswordHashIsNotNull(): Boolean

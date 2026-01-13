@@ -101,6 +101,24 @@ class AuthService(
         personRepository.save(person)
     }
 
+    fun setPasswordForPerson(
+        personId: Long,
+        newPassword: String,
+    ) {
+        if (newPassword.isBlank()) {
+            throw BadRequestException("New password cannot be blank")
+        }
+        val person =
+            personRepository.findById(personId).orElseThrow {
+                NotFoundException("Person $personId not found")
+            }
+        val newSalt = generateSalt()
+        val newHash = hashPassword(newPassword, newSalt)
+        person.passwordSalt = newSalt
+        person.passwordHash = newHash
+        personRepository.save(person)
+    }
+
     private fun generateSalt(): String {
         val bytes = ByteArray(16)
         random.nextBytes(bytes)

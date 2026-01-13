@@ -105,6 +105,7 @@ SPDX-License-Identifier: GPL-3.0-only
       :deleteCategory="deleteCategory"
       :createPerson="createPerson"
       :updatePerson="updatePerson"
+      :setPersonPassword="setPersonPassword"
       :createSavingsAccount="createSavingsAccount"
       :updateSavingsAccount="updateSavingsAccount"
       :deleteSavingsAccount="deleteSavingsAccount"
@@ -167,7 +168,8 @@ const {
   createCategoryCorrection,
   categoryPathLabel,
   categoryRank,
-  setSummaryMonth
+  setSummaryMonth,
+  setPersonPassword
 } = useBudgetData();
 
 const {
