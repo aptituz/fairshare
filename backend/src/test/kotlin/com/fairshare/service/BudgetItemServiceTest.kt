@@ -397,6 +397,13 @@ class BudgetItemServiceTest {
             endMonth = "2025-08"
         )
         `when`(budgetItemRepository.findById(4)).thenReturn(java.util.Optional.of(item))
+        `when`(
+            budgetItemRepository.findEffectiveByRootForMonth(
+                4L,
+                LocalDate.of(2025, 6, 1),
+                LocalDate.of(2025, 6, 30)
+            )
+        ).thenReturn(item)
         `when`(budgetItemRepository.save(any(BudgetItem::class.java))).thenAnswer { it.arguments[0] as BudgetItem }
 
         val result = budgetItemService.changeValueForPeriod(4, request)
@@ -412,5 +419,48 @@ class BudgetItemServiceTest {
         assertEquals(LocalDate.of(2025, 8, 31), changed.endDate)
         assertEquals(BigDecimal("800"), after.amount)
         assertEquals(LocalDate.of(2025, 12, 31), after.endDate)
+    }
+
+    @Test
+    fun `changeValueForPeriod should apply to effective item for month`() {
+        val root = BudgetItem(
+            id = 10,
+            name = "Salary",
+            amount = BigDecimal("1000"),
+            type = BudgetItemType.INCOME,
+            frequency = Frequency.MONTHLY,
+            startDate = LocalDate.of(2024, 1, 1),
+            endDate = LocalDate.of(2024, 12, 31)
+        )
+        val future = BudgetItem(
+            id = 11,
+            name = "Salary",
+            amount = BigDecimal("1200"),
+            type = BudgetItemType.INCOME,
+            frequency = Frequency.MONTHLY,
+            startDate = LocalDate.of(2025, 1, 1),
+            endDate = LocalDate.of(2025, 12, 31),
+            rootBudgetItem = root
+        )
+        root.rootBudgetItem = root
+        val request = BudgetItemValueChangeRequest(
+            amount = BigDecimal("1400"),
+            startMonth = "2025-06",
+            endMonth = "2025-06"
+        )
+        `when`(budgetItemRepository.findById(10)).thenReturn(java.util.Optional.of(root))
+        `when`(
+            budgetItemRepository.findEffectiveByRootForMonth(
+                10L,
+                LocalDate.of(2025, 6, 1),
+                LocalDate.of(2025, 6, 30)
+            )
+        ).thenReturn(future)
+        `when`(budgetItemRepository.save(any(BudgetItem::class.java))).thenAnswer { it.arguments[0] as BudgetItem }
+
+        val result = budgetItemService.changeValueForPeriod(10, request)
+
+        assertEquals(BigDecimal("1400"), result.amount)
+        assertEquals(LocalDate.of(2025, 6, 1), result.startDate)
     }
 }

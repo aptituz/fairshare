@@ -14,7 +14,6 @@ Tech Stack:
 - Docker Compose to run backend + frontend
 
 Coding conventions:
-- Do not adjust tests without asking.
 - Business logic should be covered by tests.
 - Each Kotlin class should have its own file.
 - All Kotlin code must be ktlint-clean.
