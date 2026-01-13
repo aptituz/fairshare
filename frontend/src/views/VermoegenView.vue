@@ -69,7 +69,7 @@ SPDX-License-Identifier: GPL-3.0-only
             <div class="text-body-2 text-medium-emphasis mb-2 d-flex flex-wrap ga-2">
               <span>Erwartete Ersparnis: {{ monthlyExpectedSavedLabel(group.month) }}</span>
               <span class="text-disabled">|</span>
-              <span>Tatsaechlich gespeichert: {{ monthlyActualSavedLabel(group.month) }}</span>
+              <span>Tatsaechlich gespart: {{ monthlyActualSavedLabel(group.month) }}</span>
             </div>
             <v-table density="compact" class="table-scroll">
               <thead>
