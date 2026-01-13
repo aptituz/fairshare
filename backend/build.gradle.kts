@@ -38,6 +38,7 @@ dependencies {
     runtimeOnly("com.mysql:mysql-connector-j:9.4.0")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.security:spring-security-test")
 }
 
 

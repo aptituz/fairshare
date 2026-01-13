@@ -66,6 +66,11 @@ SPDX-License-Identifier: GPL-3.0-only
         <v-card-text>
           <div v-for="group in groupedBalances" :key="group.month" class="mb-6">
             <div class="text-subtitle-1 font-weight-medium mb-2">{{ group.month }}</div>
+            <div class="text-body-2 text-medium-emphasis mb-2 d-flex flex-wrap ga-2">
+              <span>Erwartete Ersparnis: {{ monthlyExpectedSavedLabel(group.month) }}</span>
+              <span class="text-disabled">|</span>
+              <span>Tatsaechlich gespeichert: {{ monthlyActualSavedLabel(group.month) }}</span>
+            </div>
             <v-table density="compact" class="table-scroll">
               <thead>
                 <tr>
@@ -296,6 +301,38 @@ const currentTotalBalance = computed(() => {
   const last = summaryData.value[summaryData.value.length - 1];
   return Number(last.totalBalance || 0);
 });
+
+const monthlySavedAmounts = computed(() => {
+  const sorted = [...summaryData.value].sort((a, b) => String(a.month).localeCompare(String(b.month)));
+  const map = new Map();
+  sorted.forEach((entry, index) => {
+    if (index === 0) {
+      map.set(entry.month, { expected: null, actual: null });
+      return;
+    }
+    const prev = sorted[index - 1];
+    const expected = Number(entry.expectedBalance || 0) - Number(prev.expectedBalance || 0);
+    const actual = Number(entry.totalBalance || 0) - Number(prev.totalBalance || 0);
+    map.set(entry.month, { expected, actual });
+  });
+  return map;
+});
+
+const monthlyExpectedSavedLabel = (month) => {
+  const entry = monthlySavedAmounts.value.get(month);
+  if (!entry || entry.expected === null || entry.expected === undefined) {
+    return "-";
+  }
+  return props.formatCurrency(entry.expected);
+};
+
+const monthlyActualSavedLabel = (month) => {
+  const entry = monthlySavedAmounts.value.get(month);
+  if (!entry || entry.actual === null || entry.actual === undefined) {
+    return "-";
+  }
+  return props.formatCurrency(entry.actual);
+};
 
 const accountName = (accountId) => {
   const match = props.savingsAccounts.find((account) => account.id === accountId);

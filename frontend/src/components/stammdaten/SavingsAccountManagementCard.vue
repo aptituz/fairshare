@@ -44,6 +44,7 @@ SPDX-License-Identifier: GPL-3.0-only
             type="date"
             density="compact"
             hide-details
+            autocomplete="off"
             required
           />
           <v-text-field
@@ -52,6 +53,7 @@ SPDX-License-Identifier: GPL-3.0-only
             type="date"
             density="compact"
             hide-details
+            autocomplete="off"
           />
           <div class="d-flex ga-2 mt-2">
             <v-btn size="small" color="primary" @click="saveAccountEdit(account.id)">
@@ -112,12 +114,14 @@ SPDX-License-Identifier: GPL-3.0-only
               v-model="newStartDate"
               label="Startdatum"
               type="date"
+              autocomplete="off"
               required
             />
             <v-text-field
               v-model="newEndDate"
               label="Enddatum"
               type="date"
+              autocomplete="off"
             />
           </v-form>
         </v-card-text>
