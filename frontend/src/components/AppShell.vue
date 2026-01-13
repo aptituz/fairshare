@@ -11,7 +11,7 @@ SPDX-License-Identifier: GPL-3.0-only
       :temporary="!mdAndUp"
       width="280"
     >
-      <div class="px-4 py-4 d-flex align-center">
+      <div v-if="mdAndUp" class="px-4 py-4 d-flex align-center">
         <v-img :src="logo" alt="Fairshare" max-height="80" max-width="248" contain class="w-100" />
       </div>
       <v-divider class="my-2" />
@@ -87,11 +87,21 @@ SPDX-License-Identifier: GPL-3.0-only
     </v-navigation-drawer>
 
     <v-main>
-      <v-app-bar color="surface" flat>
+      <v-app-bar color="surface" flat :height="mdAndUp ? 64 : 80">
         <v-btn v-if="!mdAndUp" icon @click="drawerOpen = true">
           <v-icon icon="mdi-menu" />
         </v-btn>
-        <v-spacer />
+        <v-spacer v-if="!mdAndUp" />
+        <v-img
+          v-if="!mdAndUp"
+          :src="logo"
+          alt="Fairshare"
+          height="48"
+          max-width="200"
+          contain
+        />
+        <v-spacer v-if="!mdAndUp" />
+        <v-spacer v-else />
         <v-menu v-if="currentUsername">
           <template #activator="{ props }">
             <v-btn icon v-bind="props">
