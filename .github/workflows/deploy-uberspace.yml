@@ -50,22 +50,6 @@ jobs:
           script: |
             mkdir -p ~/fairshare ~/fairshare/logs ~/html
 
-      - name: Configure Apache routing
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.UBERSPACE_HOST }}
-          username: ${{ secrets.UBERSPACE_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cat > ~/html/.htaccess <<'EOF'
-            RewriteEngine On
-            
-            RewriteRule ^fairshare/api/ - [L]
-            RewriteCond %{REQUEST_FILENAME} !-f
-            RewriteCond %{REQUEST_FILENAME} !-d
-            RewriteRule . /index.html [L]
-            EOF
-
       - name: Configure supervisord service
         uses: appleboy/ssh-action@v1.0.3
         env:
@@ -113,6 +97,22 @@ jobs:
           remote_host: ${{ secrets.UBERSPACE_HOST }}
           remote_user: ${{ secrets.UBERSPACE_USER }}
           remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Configure Apache routing
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.UBERSPACE_HOST }}
+          username: ${{ secrets.UBERSPACE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cat > ~/html/.htaccess <<'EOF'
+            RewriteEngine On
+            
+            RewriteRule ^fairshare/api/ - [L]
+            RewriteCond %{REQUEST_FILENAME} !-f
+            RewriteCond %{REQUEST_FILENAME} !-d
+            RewriteRule . /index.html [L]
+            EOF
 
       - name: Activate backend jar
         uses: appleboy/ssh-action@v1.0.3
