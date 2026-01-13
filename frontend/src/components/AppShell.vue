@@ -5,7 +5,12 @@ SPDX-License-Identifier: GPL-3.0-only
 
 <template>
   <v-app>
-    <v-navigation-drawer permanent width="280">
+    <v-navigation-drawer
+      v-model="drawerOpen"
+      :permanent="mdAndUp"
+      :temporary="!mdAndUp"
+      width="280"
+    >
       <div class="px-4 py-4 d-flex align-center">
         <v-img :src="logo" alt="Fairshare" max-height="80" max-width="248" contain class="w-100" />
       </div>
@@ -83,6 +88,9 @@ SPDX-License-Identifier: GPL-3.0-only
 
     <v-main>
       <v-app-bar color="surface" flat>
+        <v-btn v-if="!mdAndUp" icon @click="drawerOpen = true">
+          <v-icon icon="mdi-menu" />
+        </v-btn>
         <v-spacer />
         <v-menu v-if="currentUsername">
           <template #activator="{ props }">
@@ -105,7 +113,7 @@ SPDX-License-Identifier: GPL-3.0-only
           </v-list>
         </v-menu>
       </v-app-bar>
-      <v-container fluid class="pa-6">
+      <v-container fluid :class="containerClasses">
         <slot />
       </v-container>
     </v-main>
@@ -140,7 +148,8 @@ SPDX-License-Identifier: GPL-3.0-only
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { computed, ref, watch } from "vue";
+import { useDisplay } from "vuetify";
 import MonthYearPicker from "./MonthYearPicker.vue";
 import logo from "../assets/logo.png";
 
@@ -159,12 +168,23 @@ const props = defineProps({
 const emit = defineEmits(["navigate", "month-change"]);
 
 const openGroups = ref(["datenerfassung", "stammdaten"]);
+const { mdAndUp } = useDisplay();
+const drawerOpen = ref(mdAndUp.value);
 const passwordDialogOpen = ref(false);
 const currentPassword = ref("");
 const newPassword = ref("");
 
+const containerClasses = computed(() => (mdAndUp.value ? "pa-6" : "pa-3"));
+
+watch(mdAndUp, (value) => {
+  drawerOpen.value = value;
+});
+
 const navigate = (view, subView) => {
   emit("navigate", { view, subView });
+  if (!mdAndUp.value) {
+    drawerOpen.value = false;
+  }
 };
 
 const updateMonth = (value) => {
