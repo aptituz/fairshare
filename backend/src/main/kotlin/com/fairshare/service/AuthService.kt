@@ -68,8 +68,7 @@ class AuthService(
     }
 
     fun currentUser(): AuthUserResponse {
-        val username = SecurityContextHolder.getContext().authentication?.name
-            ?: throw BadRequestException("Not authenticated")
+        val username = resolveAuthenticatedUsername()
         val person =
             personRepository.findByUsername(username)
                 ?: throw NotFoundException("User $username not found")
@@ -80,8 +79,7 @@ class AuthService(
     }
 
     fun changePassword(request: ChangePasswordRequest) {
-        val username = SecurityContextHolder.getContext().authentication?.name
-            ?: throw BadRequestException("Not authenticated")
+        val username = resolveAuthenticatedUsername()
         val person =
             personRepository.findByUsername(username)
                 ?: throw NotFoundException("User $username not found")
@@ -99,6 +97,14 @@ class AuthService(
         person.passwordSalt = newSalt
         person.passwordHash = newHash
         personRepository.save(person)
+    }
+
+    private fun resolveAuthenticatedUsername(): String {
+        val username = SecurityContextHolder.getContext().authentication?.name
+        if (username.isNullOrBlank() || username == "anonymousUser") {
+            throw BadRequestException("Not authenticated")
+        }
+        return username
     }
 
     fun setPasswordForPerson(
