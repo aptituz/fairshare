@@ -30,99 +30,91 @@ SPDX-License-Identifier: GPL-3.0-only
         <v-table density="compact" class="table-scroll">
           <thead>
             <tr>
-              <th colspan="8" class="text-left text-subtitle-1 font-weight-bold">
+              <th colspan="3" class="text-left text-subtitle-1 font-weight-bold">
                 {{ group.label }}
               </th>
             </tr>
             <tr>
               <th class="text-left">Name</th>
-              <th class="text-right">Monatlich</th>
-              <th class="text-right">Einmalig</th>
-              <th class="text-right">Quartalsweise</th>
-              <th class="text-right">Halbjährlich</th>
-              <th class="text-right">Jährlich</th>
-              <th class="text-right">Monatsanteil</th>
+              <th class="text-right">Monatlich/Monatsanteil</th>
               <th class="text-right">Aktion</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="budgetItem in group.items" :key="budgetItem.id">
-              <td>
-                <span>{{ budgetItem.name }}</span>
-              </td>
-              <td class="text-right">{{ frequencyAmount(budgetItem, "MONTHLY") }}</td>
-              <td class="text-right">{{ frequencyAmount(budgetItem, "ONE_TIME") }}</td>
-              <td class="text-right">{{ frequencyAmount(budgetItem, "QUARTERLY") }}</td>
-              <td class="text-right">{{ frequencyAmount(budgetItem, "HALF_YEARLY") }}</td>
-              <td class="text-right">{{ frequencyAmount(budgetItem, "YEARLY") }}</td>
-              <td class="text-right">{{ formatCurrency(budgetItem.monthlyAmount) }}</td>
-              <td class="text-right">
-                <v-menu>
-                  <template #activator="{ props }">
-                    <v-btn size="small" variant="text" icon v-bind="props">
-                      <v-icon icon="mdi-dots-vertical" />
-                    </v-btn>
-                  </template>
-                  <v-list density="compact">
-                    <v-list-item @click="startEdit(budgetItem)">
-                      <v-list-item-title class="d-flex align-center ga-2">
-                        <v-icon icon="mdi-pencil" size="small" />
-                        Bearbeiten
-                      </v-list-item-title>
-                    </v-list-item>
-                    <v-list-item @click="openChangeDialog(budgetItem)">
-                      <v-list-item-title class="d-flex align-center ga-2">
-                        <v-icon icon="mdi-swap-horizontal" size="small" />
-                        Betrag aendern
-                      </v-list-item-title>
-                    </v-list-item>
-                    <v-list-item @click="openOneTimeDialog(budgetItem)">
-                      <v-list-item-title class="d-flex align-center ga-2">
-                        <v-icon icon="mdi-calendar-edit" size="small" />
-                        Betrag einmalig aendern
-                      </v-list-item-title>
-                    </v-list-item>
-                    <v-list-item
-                      v-if="canSuspend && !budgetItem.suspendedForMonth"
-                      @click="openSuspendDialog(budgetItem)"
-                    >
-                      <v-list-item-title class="d-flex align-center ga-2">
-                        <v-icon icon="mdi-pause-circle-outline" size="small" />
-                        Aussetzen
-                      </v-list-item-title>
-                    </v-list-item>
-                    <v-list-item
-                      v-if="budgetItem.suspendedForMonth"
-                      @click="openResumeDialog(budgetItem)"
-                    >
-                      <v-list-item-title class="d-flex align-center ga-2">
-                        <v-icon icon="mdi-play-circle-outline" size="small" />
-                        Fortsetzen
-                      </v-list-item-title>
-                    </v-list-item>
-                    <v-list-item @click="openHistoryDialog(budgetItem)">
-                      <v-list-item-title class="d-flex align-center ga-2">
-                        <v-icon icon="mdi-chart-timeline-variant" size="small" />
-                        Historie
-                      </v-list-item-title>
-                    </v-list-item>
-                    <v-list-item @click="remove(budgetItem.id)">
-                      <v-list-item-title class="d-flex align-center ga-2">
-                        <v-icon icon="mdi-delete" size="small" />
-                        Loeschen
-                      </v-list-item-title>
-                    </v-list-item>
+            <template v-for="budgetItem in group.items" :key="budgetItem.id">
+              <tr>
+                <td>
+                  <span>{{ budgetItem.name }}</span>
+                </td>
+                <td class="text-right">
+                  <div>{{ formatCurrency(budgetItem.monthlyAmount) }}</div>
+                  <div v-if="frequencyHint(budgetItem)" class="text-caption text-medium-emphasis">
+                    ({{ frequencyHint(budgetItem) }})
+                  </div>
+                </td>
+                <td class="text-right">
+                  <v-menu>
+                    <template #activator="{ props }">
+                      <v-btn size="small" variant="text" icon v-bind="props">
+                        <v-icon icon="mdi-dots-vertical" />
+                      </v-btn>
+                    </template>
+                    <v-list density="compact">
+                      <v-list-item @click="startEdit(budgetItem)">
+                        <v-list-item-title class="d-flex align-center ga-2">
+                          <v-icon icon="mdi-pencil" size="small" />
+                          Bearbeiten
+                        </v-list-item-title>
+                      </v-list-item>
+                      <v-list-item @click="openChangeDialog(budgetItem)">
+                        <v-list-item-title class="d-flex align-center ga-2">
+                          <v-icon icon="mdi-swap-horizontal" size="small" />
+                          Betrag aendern
+                        </v-list-item-title>
+                      </v-list-item>
+                      <v-list-item @click="openOneTimeDialog(budgetItem)">
+                        <v-list-item-title class="d-flex align-center ga-2">
+                          <v-icon icon="mdi-calendar-edit" size="small" />
+                          Betrag einmalig aendern
+                        </v-list-item-title>
+                      </v-list-item>
+                      <v-list-item
+                        v-if="canSuspend && !budgetItem.suspendedForMonth"
+                        @click="openSuspendDialog(budgetItem)"
+                      >
+                        <v-list-item-title class="d-flex align-center ga-2">
+                          <v-icon icon="mdi-pause-circle-outline" size="small" />
+                          Aussetzen
+                        </v-list-item-title>
+                      </v-list-item>
+                      <v-list-item
+                        v-if="budgetItem.suspendedForMonth"
+                        @click="openResumeDialog(budgetItem)"
+                      >
+                        <v-list-item-title class="d-flex align-center ga-2">
+                          <v-icon icon="mdi-play-circle-outline" size="small" />
+                          Fortsetzen
+                        </v-list-item-title>
+                      </v-list-item>
+                      <v-list-item @click="openHistoryDialog(budgetItem)">
+                        <v-list-item-title class="d-flex align-center ga-2">
+                          <v-icon icon="mdi-chart-timeline-variant" size="small" />
+                          Historie
+                        </v-list-item-title>
+                      </v-list-item>
+                      <v-list-item @click="remove(budgetItem.id)">
+                        <v-list-item-title class="d-flex align-center ga-2">
+                          <v-icon icon="mdi-delete" size="small" />
+                          Loeschen
+                        </v-list-item-title>
+                      </v-list-item>
                   </v-list>
                 </v-menu>
               </td>
-            </tr>
+              </tr>
+            </template>
             <tr>
               <td class="font-weight-bold">{{ group.label }} Gesamt</td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td></td>
               <td class="text-right font-weight-bold">{{ formatCurrency(group.total) }}</td>
               <td></td>
             </tr>
@@ -855,11 +847,21 @@ const commitEditingCategorySearch = async () => {
   editingCategoryId.value = created?.id ?? trimmed;
 };
 
-const frequencyAmount = (budgetItem, frequency) => {
-  if (budgetItem.frequency !== frequency) {
+const frequencyHint = (budgetItem) => {
+  if (!budgetItem || budgetItem.frequency === "MONTHLY") {
     return "";
   }
-  return props.formatCurrency(budgetItem.amount);
+  const labelByFrequency = {
+    QUARTERLY: "pro Quartal",
+    HALF_YEARLY: "pro Halbjahr",
+    YEARLY: "pro Jahr"
+  };
+  const suffix = labelByFrequency[budgetItem.frequency];
+  if (!suffix) {
+    return "";
+  }
+  const amount = props.formatCurrency(budgetItem.amount);
+  return `${amount} ${suffix}`;
 };
 
 const monthToDate = (value) => {

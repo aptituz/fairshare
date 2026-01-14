@@ -177,6 +177,7 @@ class SavingsAccountBalanceService(
                 month = month.toString(),
                 totalBalance = total,
                 expectedBalance = expectedBalance,
+                expectedMonthlySavings = monthlyBalance,
             )
             expectedBalance = expectedBalance.add(monthlyBalance)
             response

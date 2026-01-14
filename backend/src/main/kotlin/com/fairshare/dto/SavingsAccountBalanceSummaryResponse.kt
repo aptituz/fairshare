@@ -11,4 +11,5 @@ data class SavingsAccountBalanceSummaryResponse(
     val month: String,
     val totalBalance: BigDecimal,
     val expectedBalance: BigDecimal,
+    val expectedMonthlySavings: BigDecimal,
 )

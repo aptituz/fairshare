@@ -112,9 +112,12 @@ class SavingsAccountBalanceServiceTest {
         assertEquals(3, result.size)
         assertEquals(BigDecimal("100.00"), result[0].totalBalance)
         assertEquals(BigDecimal("80.00"), result[0].expectedBalance)
+        assertEquals(BigDecimal("10.00"), result[0].expectedMonthlySavings)
         assertEquals(BigDecimal("300.00"), result[1].totalBalance)
         assertEquals(BigDecimal("90.00"), result[1].expectedBalance)
+        assertEquals(BigDecimal("-5.00"), result[1].expectedMonthlySavings)
         assertEquals(BigDecimal("150.00"), result[2].totalBalance)
         assertEquals(BigDecimal("85.00"), result[2].expectedBalance)
+        assertEquals(BigDecimal("20.00"), result[2].expectedMonthlySavings)
     }
 }

@@ -10,6 +10,8 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.ControllerAdvice
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.context.request.WebRequest
+import org.springframework.http.converter.HttpMessageNotReadableException
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 
 @ControllerAdvice
 class GlobalExceptionHandler {
@@ -29,6 +31,21 @@ class GlobalExceptionHandler {
     @ExceptionHandler(BadRequestException::class)
     fun handleBadRequestException(ex: BadRequestException, request: WebRequest): ResponseEntity<Any> {
         val body = mapOf("message" to ex.message)
+        return ResponseEntity(body, HttpStatus.BAD_REQUEST)
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException::class)
+    fun handleMessageNotReadable(ex: HttpMessageNotReadableException, request: WebRequest): ResponseEntity<Any> {
+        val body = mapOf("message" to "Invalid request payload")
+        return ResponseEntity(body, HttpStatus.BAD_REQUEST)
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException::class)
+    fun handleTypeMismatch(
+        ex: MethodArgumentTypeMismatchException,
+        request: WebRequest,
+    ): ResponseEntity<Any> {
+        val body = mapOf("message" to "Invalid request parameter")
         return ResponseEntity(body, HttpStatus.BAD_REQUEST)
     }
 }

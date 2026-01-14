@@ -67,6 +67,10 @@ SPDX-License-Identifier: GPL-3.0-only
           <div v-for="group in groupedBalances" :key="group.month" class="mb-6">
             <div class="text-subtitle-1 font-weight-medium mb-2">{{ group.month }}</div>
             <div class="text-body-2 text-medium-emphasis mb-2 d-flex flex-wrap ga-2">
+              <span>Kontostand vor Monat: {{ monthlyActualTotalBeforeLabel(group.month) }}</span>
+              <span class="text-disabled">|</span>
+              <span>Kontostand nach Monat: {{ monthlyActualTotalAfterLabel(group.month) }}</span>
+              <span class="text-disabled">|</span>
               <span>Erwartete Ersparnis: {{ monthlyExpectedSavedLabel(group.month) }}</span>
               <span class="text-disabled">|</span>
               <span>Tatsaechlich gespart: {{ monthlyActualSavedLabel(group.month) }}</span>
@@ -302,17 +306,78 @@ const currentTotalBalance = computed(() => {
   return Number(last.totalBalance || 0);
 });
 
+const balanceEffectiveDate = (value) => {
+  const date = toDateValue(value);
+  if (!date) {
+    return null;
+  }
+  if (date.getDate() === 1) {
+    date.setDate(0);
+  }
+  return date;
+};
+
+const monthlyActualTotals = computed(() => {
+  const monthSet = new Set();
+  summaryData.value.forEach((entry) => monthSet.add(entry.month));
+  balances.value.forEach((balance) => {
+    if (balance.balanceDate) {
+      monthSet.add(String(balance.balanceDate).slice(0, 7));
+    }
+  });
+  const months = Array.from(monthSet).sort((a, b) => a.localeCompare(b));
+  const balancesWithEffectiveDate = balances.value.map((balance) => ({
+    ...balance,
+    effectiveDate: balanceEffectiveDate(balance.balanceDate)
+  }));
+  const totals = new Map();
+  months.forEach((month) => {
+    const monthEnd = toDateValue(monthToEndDate(month));
+    if (!monthEnd) {
+      totals.set(month, { before: 0, after: 0 });
+      return;
+    }
+    const monthStart = new Date(monthEnd.getFullYear(), monthEnd.getMonth(), 1);
+    const beforeDate = new Date(monthStart);
+    beforeDate.setDate(0);
+    const afterTotal = props.savingsAccounts
+      .filter((account) => isAccountActiveForDate(account, monthEnd.toISOString().slice(0, 10)))
+      .reduce((acc, account) => {
+        const latest = balancesWithEffectiveDate
+          .filter((balance) => balance.savingsAccountId === account.id)
+          .filter((balance) => balance.effectiveDate && balance.effectiveDate <= monthEnd)
+          .sort((a, b) => b.effectiveDate - a.effectiveDate)[0];
+        const amount = latest ? Number(latest.balanceAmount || 0) : 0;
+        return acc + amount;
+      }, 0);
+    const beforeTotal = props.savingsAccounts
+      .filter((account) => isAccountActiveForDate(account, beforeDate.toISOString().slice(0, 10)))
+      .reduce((acc, account) => {
+        const latest = balancesWithEffectiveDate
+          .filter((balance) => balance.savingsAccountId === account.id)
+          .filter((balance) => balance.effectiveDate && balance.effectiveDate <= beforeDate)
+          .sort((a, b) => b.effectiveDate - a.effectiveDate)[0];
+        const amount = latest ? Number(latest.balanceAmount || 0) : 0;
+        return acc + amount;
+      }, 0);
+    totals.set(month, { before: beforeTotal, after: afterTotal });
+  });
+  return totals;
+});
+
 const monthlySavedAmounts = computed(() => {
   const sorted = [...summaryData.value].sort((a, b) => String(a.month).localeCompare(String(b.month)));
   const map = new Map();
   sorted.forEach((entry, index) => {
     if (index === 0) {
-      map.set(entry.month, { expected: null, actual: null });
+      map.set(entry.month, { expected: entry.expectedMonthlySavings ?? null, actual: null });
       return;
     }
     const prev = sorted[index - 1];
-    const expected = Number(entry.expectedBalance || 0) - Number(prev.expectedBalance || 0);
-    const actual = Number(entry.totalBalance || 0) - Number(prev.totalBalance || 0);
+    const currentAfter = monthlyActualTotals.value.get(entry.month)?.after ?? 0;
+    const prevAfter = monthlyActualTotals.value.get(prev.month)?.after ?? 0;
+    const actual = Number(currentAfter) - Number(prevAfter);
+    const expected = entry.expectedMonthlySavings ?? null;
     map.set(entry.month, { expected, actual });
   });
   return map;
@@ -332,6 +397,22 @@ const monthlyActualSavedLabel = (month) => {
     return "-";
   }
   return props.formatCurrency(entry.actual);
+};
+
+const monthlyActualTotalBeforeLabel = (month) => {
+  const entry = monthlyActualTotals.value.get(month);
+  if (!entry) {
+    return "-";
+  }
+  return props.formatCurrency(entry.before);
+};
+
+const monthlyActualTotalAfterLabel = (month) => {
+  const entry = monthlyActualTotals.value.get(month);
+  if (!entry) {
+    return "-";
+  }
+  return props.formatCurrency(entry.after);
 };
 
 const accountName = (accountId) => {
