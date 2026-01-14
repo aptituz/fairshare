@@ -16,17 +16,13 @@ import com.fairshare.exception.NotFoundException
 import com.fairshare.repo.PersonRepository
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Service
-import java.security.MessageDigest
-import java.security.SecureRandom
-import java.util.Base64
 
 @Service
 class AuthService(
     private val personRepository: PersonRepository,
     private val jwtService: JwtService,
+    private val passwordService: PasswordService,
 ) {
-    private val random = SecureRandom()
-
     fun status(): AuthStatusResponse = AuthStatusResponse(ready = personRepository.existsByPasswordHashIsNotNull())
 
     fun setup(request: SetupPasswordRequest): AuthResponse {
@@ -41,9 +37,8 @@ class AuthService(
         val person =
             personRepository.findByUsername(username)
                 ?: throw NotFoundException("User $username not found")
-        val salt = generateSalt()
-        val hash = hashPassword(password, salt)
-        person.passwordSalt = salt
+        val hash = passwordService.encode(password)
+        person.passwordSalt = null
         person.passwordHash = hash
         personRepository.save(person)
         return AuthResponse(token = jwtService.generateToken(person.username))
@@ -58,10 +53,8 @@ class AuthService(
         val person =
             personRepository.findByUsername(username)
                 ?: throw NotFoundException("User $username not found")
-        val salt = person.passwordSalt ?: throw BadRequestException("Password not set")
         val hash = person.passwordHash ?: throw BadRequestException("Password not set")
-        val candidate = hashPassword(password, salt)
-        if (candidate != hash) {
+        if (!passwordService.matches(password, hash)) {
             throw BadRequestException("Invalid credentials")
         }
         return AuthResponse(token = jwtService.generateToken(person.username))
@@ -83,18 +76,15 @@ class AuthService(
         val person =
             personRepository.findByUsername(username)
                 ?: throw NotFoundException("User $username not found")
-        val currentSalt = person.passwordSalt ?: throw BadRequestException("Password not set")
         val currentHash = person.passwordHash ?: throw BadRequestException("Password not set")
-        val candidate = hashPassword(request.currentPassword, currentSalt)
-        if (candidate != currentHash) {
+        if (!passwordService.matches(request.currentPassword, currentHash)) {
             throw BadRequestException("Current password is incorrect")
         }
         if (request.newPassword.isBlank()) {
             throw BadRequestException("New password cannot be blank")
         }
-        val newSalt = generateSalt()
-        val newHash = hashPassword(request.newPassword, newSalt)
-        person.passwordSalt = newSalt
+        val newHash = passwordService.encode(request.newPassword)
+        person.passwordSalt = null
         person.passwordHash = newHash
         personRepository.save(person)
     }
@@ -118,23 +108,9 @@ class AuthService(
             personRepository.findById(personId).orElseThrow {
                 NotFoundException("Person $personId not found")
             }
-        val newSalt = generateSalt()
-        val newHash = hashPassword(newPassword, newSalt)
-        person.passwordSalt = newSalt
+        val newHash = passwordService.encode(newPassword)
+        person.passwordSalt = null
         person.passwordHash = newHash
         personRepository.save(person)
-    }
-
-    private fun generateSalt(): String {
-        val bytes = ByteArray(16)
-        random.nextBytes(bytes)
-        return Base64.getEncoder().encodeToString(bytes)
-    }
-
-    private fun hashPassword(password: String, salt: String): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        digest.update(Base64.getDecoder().decode(salt))
-        val hashed = digest.digest(password.toByteArray(Charsets.UTF_8))
-        return hashed.joinToString("") { "%02x".format(it) }
     }
 }
