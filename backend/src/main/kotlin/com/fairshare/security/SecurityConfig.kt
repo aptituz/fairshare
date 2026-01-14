@@ -12,6 +12,7 @@ import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
 import org.springframework.security.config.Customizer
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter
 
 @Configuration
 class SecurityConfig(
@@ -23,6 +24,13 @@ class SecurityConfig(
             .csrf { it.disable() }
             .cors(Customizer.withDefaults())
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
+            .headers {
+                it.frameOptions { frame -> frame.deny() }
+                it.referrerPolicy { policy -> policy.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER) }
+                it.permissionsPolicy { policy ->
+                    policy.policy("geolocation=(), microphone=(), camera=(), payment=(), usb=()")
+                }
+            }
             .authorizeHttpRequests {
                 it.requestMatchers(
                     "/api/auth/**",
