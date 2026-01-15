@@ -7,6 +7,7 @@ package com.fairshare.service
 
 import com.fairshare.dto.CreateSavingsAccountBalanceRequest
 import com.fairshare.dto.CreateSavingsAccountBalancesRequest
+import com.fairshare.dto.SavingsAccountBalanceMonthResponse
 import com.fairshare.dto.SavingsAccountBalanceResponse
 import com.fairshare.dto.SavingsAccountBalanceSummaryResponse
 import com.fairshare.exception.BadRequestException
@@ -17,6 +18,7 @@ import com.fairshare.repo.SavingsAccountBalanceRepository
 import com.fairshare.repo.SavingsAccountRepository
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
+import java.time.LocalDate
 import java.time.YearMonth
 
 @Service
@@ -25,36 +27,19 @@ class SavingsAccountBalanceService(
     private val savingsAccountBalanceRepository: SavingsAccountBalanceRepository,
     private val budgetService: BudgetService,
 ) {
+    private data class SummaryContext(
+        val accountIds: MutableList<Long>,
+        val balancesByAccount: MutableMap<Long, MutableList<SavingsAccountBalance>>,
+        val months: MutableList<YearMonth>,
+        val householdBalances: MutableMap<String, BigDecimal>,
+    )
+
     fun create(
         accountId: Long,
         request: CreateSavingsAccountBalanceRequest,
     ): SavingsAccountBalanceResponse {
-        val account =
-            savingsAccountRepository.findById(accountId).orElseThrow {
-                NotFoundException("Savings account $accountId not found")
-            }
-        val amount = request.balanceAmount
-        if (amount < BigDecimal.ZERO) {
-            throw BadRequestException("Balance cannot be negative")
-        }
-        val existing =
-            savingsAccountBalanceRepository.findBySavingsAccountIdAndBalanceDate(
-                accountId,
-                request.balanceDate,
-            )
-        val saved =
-            if (existing != null) {
-                existing.balanceAmount = amount
-                savingsAccountBalanceRepository.save(existing)
-            } else {
-                savingsAccountBalanceRepository.save(
-                    SavingsAccountBalance(
-                        savingsAccount = account,
-                        balanceDate = request.balanceDate,
-                        balanceAmount = amount,
-                    ),
-                )
-            }
+        val account = requireAccount(accountId)
+        val saved = saveBalance(account, request.balanceDate, request.balanceAmount)
         return saved.toResponse()
     }
 
@@ -68,36 +53,34 @@ class SavingsAccountBalanceService(
             throw NotFoundException("One or more savings accounts not found")
         }
         return request.balances.map { input ->
-            val amount = input.balanceAmount
-            if (amount < BigDecimal.ZERO) {
-                throw BadRequestException("Balance cannot be negative")
-            }
             val account = accounts[input.savingsAccountId]
                 ?: throw NotFoundException("Savings account ${input.savingsAccountId} not found")
-            val existing =
-                savingsAccountBalanceRepository.findBySavingsAccountIdAndBalanceDate(
-                    input.savingsAccountId,
-                    request.balanceDate,
-                )
-            val saved =
-                if (existing != null) {
-                    existing.balanceAmount = amount
-                    savingsAccountBalanceRepository.save(existing)
-                } else {
-                    savingsAccountBalanceRepository.save(
-                        SavingsAccountBalance(
-                            savingsAccount = account,
-                            balanceDate = request.balanceDate,
-                            balanceAmount = amount,
-                        ),
-                    )
-                }
+            val saved = saveBalance(account, request.balanceDate, input.balanceAmount)
             saved.toResponse()
         }
     }
 
     fun listBalances(): List<SavingsAccountBalanceResponse> =
         savingsAccountBalanceRepository.findAllByOrderByBalanceDateDescIdDesc().map { it.toResponse() }
+
+    fun monthlyBalances(year: Int): List<SavingsAccountBalanceMonthResponse> {
+        val range = yearRange(year)
+        val summaries = monthlySummary(range.first, range.second)
+        val balances =
+            savingsAccountBalanceRepository.findByBalanceDateBetweenOrderByBalanceDateDescIdDesc(
+                range.first.atDay(1),
+                range.second.atEndOfMonth(),
+            )
+        val balancesByMonth = balances.groupBy { YearMonth.from(it.balanceDate).toString() }
+        return summaries.map { summary ->
+            val monthBalances = balancesByMonth[summary.month].orEmpty().map { it.toResponse() }
+            SavingsAccountBalanceMonthResponse(
+                month = summary.month,
+                totalBalance = summary.totalBalance,
+                balances = monthBalances,
+            )
+        }
+    }
 
     fun delete(id: Long) {
         val balance =
@@ -111,76 +94,157 @@ class SavingsAccountBalanceService(
         from: YearMonth,
         to: YearMonth,
     ): List<SavingsAccountBalanceSummaryResponse> {
-        val accounts = savingsAccountRepository.findAll()
-        if (accounts.isEmpty()) {
+        val context = buildSummaryContext(from, to)
+        if (context.accountIds.isEmpty()) {
             return emptyList()
         }
-        val accountIds = accounts.mapNotNull { it.id }
-        val endDate = to.atEndOfMonth()
-        val balances = savingsAccountBalanceRepository.findBySavingsAccountIdsUpToDate(accountIds, endDate)
-        val balancesByAccount =
-            balances.groupBy { it.savingsAccount.id!! }.mapValues { (_, items) ->
-                items.sortedBy { it.balanceDate }
-            }
-        val startDate = from.atDay(1).minusDays(1)
+        return buildMonthlySummaries(context)
+    }
 
+    private fun requireAccount(accountId: Long) =
+        savingsAccountRepository.findById(accountId).orElseThrow {
+            NotFoundException("Savings account $accountId not found")
+        }
+
+    private fun saveBalance(
+        account: SavingsAccount,
+        balanceDate: LocalDate,
+        amount: BigDecimal,
+    ): SavingsAccountBalance {
+        if (amount < BigDecimal.ZERO) {
+            throw BadRequestException("Balance cannot be negative")
+        }
+        val existing =
+            savingsAccountBalanceRepository.findBySavingsAccountIdAndBalanceDate(
+                account.id ?: throw NotFoundException("Savings account must be persisted"),
+                balanceDate,
+            )
+        return if (existing != null) {
+            existing.balanceAmount = amount
+            savingsAccountBalanceRepository.save(existing)
+        } else {
+            savingsAccountBalanceRepository.save(
+                SavingsAccountBalance(
+                    savingsAccount = account,
+                    balanceDate = balanceDate,
+                    balanceAmount = amount,
+                ),
+            )
+        }
+    }
+
+    private fun yearRange(year: Int): Pair<YearMonth, YearMonth> =
+        YearMonth.of(year, 1) to YearMonth.of(year, 12)
+
+    private fun buildSummaryContext(
+        from: YearMonth,
+        to: YearMonth,
+    ): SummaryContext {
+        val accounts = savingsAccountRepository.findAll()
+        val accountIds = accounts.mapNotNull { it.id }.toMutableList()
+        val balancesByAccount = mutableMapOf<Long, MutableList<SavingsAccountBalance>>()
+        if (accountIds.isNotEmpty()) {
+            val balances =
+                savingsAccountBalanceRepository.findBySavingsAccountIdsUpToDate(
+                    accountIds,
+                    to.atEndOfMonth(),
+                )
+            balances.forEach { balance ->
+                val list = balancesByAccount.getOrPut(balance.savingsAccount.id!!) { mutableListOf() }
+                list.add(balance)
+            }
+            balancesByAccount.values.forEach { it.sortBy { item -> item.balanceDate } }
+        }
         val months = mutableListOf<YearMonth>()
         var cursor = from
         while (!cursor.isAfter(to)) {
             months.add(cursor)
             cursor = cursor.plusMonths(1)
         }
-        val householdBalances =
-            budgetService
-                .monthlyTotals(from, to)
-                .associate { it.month to it.householdBudgetBalance }
+        val householdBalances = mutableMapOf<String, BigDecimal>()
+        budgetService
+            .monthlyTotals(from, to)
+            .forEach { total -> householdBalances[total.month] = total.householdBudgetBalance }
+        return SummaryContext(accountIds, balancesByAccount, months, householdBalances)
+    }
 
-        val indices = accountIds.associateWith { 0 }.toMutableMap()
-        val currentAmounts = accountIds.associateWith { BigDecimal.ZERO }.toMutableMap()
-        val startingTotal =
-            accountIds.fold(BigDecimal.ZERO) { acc, accountId ->
-                val items = balancesByAccount[accountId].orEmpty()
-                val prior = items.lastOrNull { !it.balanceDate.isAfter(startDate) }
-                acc.add(prior?.balanceAmount ?: BigDecimal.ZERO)
-            }
-        var expectedBalance = startingTotal
+    private fun buildMonthlySummaries(
+        context: SummaryContext,
+    ): List<SavingsAccountBalanceSummaryResponse> {
+        val indices = context.accountIds.associateWith { 0 }.toMutableMap()
+        val currentAmounts = mutableMapOf<Long, BigDecimal>()
+        context.accountIds.forEach { accountId ->
+            currentAmounts[accountId] = BigDecimal.ZERO
+        }
+        var expectedBalance =
+            startingExpectedBalance(
+                context.accountIds,
+                context.balancesByAccount,
+                context.months.first(),
+            )
 
-        return months.map { month ->
+        return context.months.map { month ->
             val monthStart = month.atDay(1)
             val monthEnd = month.atEndOfMonth()
-            accountIds.forEach { accountId ->
-                val items = balancesByAccount[accountId].orEmpty()
-                var index = indices[accountId] ?: 0
-                while (index < items.size && !items[index].balanceDate.isAfter(monthEnd)) {
-                    currentAmounts[accountId] = items[index].balanceAmount
-                    index += 1
-                }
-                indices[accountId] = index
-            }
-            val activeAccountIds =
-                accounts
-                    .filter { account ->
-                        val startOk = account.startDate == null || !account.startDate!!.isAfter(monthEnd)
-                        val endOk = account.endDate == null || !account.endDate!!.isBefore(monthStart)
-                        startOk && endOk
-                    }
-                    .mapNotNull { it.id }
-                    .toSet()
-            val total =
-                currentAmounts
-                    .filter { (accountId, _) -> activeAccountIds.contains(accountId) }
-                    .values
-                    .fold(BigDecimal.ZERO) { acc, value -> acc.add(value) }
-            val monthlyBalance = householdBalances[month.toString()] ?: BigDecimal.ZERO
+            updateCurrentAmounts(context.accountIds, context.balancesByAccount, indices, currentAmounts, monthEnd)
+            val activeAccountIds = activeAccountsForMonth(monthStart, monthEnd)
+            val total = sumActiveBalances(currentAmounts, activeAccountIds)
+            val monthlyBalance = context.householdBalances[month.toString()] ?: BigDecimal.ZERO
             val response =
                 SavingsAccountBalanceSummaryResponse(
-                month = month.toString(),
-                totalBalance = total,
-                expectedBalance = expectedBalance,
-                expectedMonthlySavings = monthlyBalance,
-            )
+                    month = month.toString(),
+                    totalBalance = total,
+                    expectedBalance = expectedBalance,
+                    expectedMonthlySavings = monthlyBalance,
+                )
             expectedBalance = expectedBalance.add(monthlyBalance)
             response
         }
     }
+
+    private fun startingExpectedBalance(
+        accountIds: List<Long>,
+        balancesByAccount: Map<Long, MutableList<SavingsAccountBalance>>,
+        firstMonth: YearMonth,
+    ): BigDecimal {
+        val startDate = firstMonth.atDay(1).minusDays(1)
+        return accountIds.fold(BigDecimal.ZERO) { acc, accountId ->
+            val items = balancesByAccount[accountId].orEmpty()
+            val prior = items.lastOrNull { !it.balanceDate.isAfter(startDate) }
+            acc.add(prior?.balanceAmount ?: BigDecimal.ZERO)
+        }
+    }
+
+    private fun updateCurrentAmounts(
+        accountIds: List<Long>,
+        balancesByAccount: Map<Long, MutableList<SavingsAccountBalance>>,
+        indices: MutableMap<Long, Int>,
+        currentAmounts: MutableMap<Long, BigDecimal>,
+        monthEnd: LocalDate,
+    ) {
+        accountIds.forEach { accountId ->
+            val items = balancesByAccount[accountId].orEmpty()
+            var index = indices[accountId] ?: 0
+            while (index < items.size && !items[index].balanceDate.isAfter(monthEnd)) {
+                currentAmounts[accountId] = items[index].balanceAmount
+                index += 1
+            }
+            indices[accountId] = index
+        }
+    }
+
+    private fun activeAccountsForMonth(
+        monthStart: LocalDate,
+        monthEnd: LocalDate,
+    ): Set<Long> =
+        savingsAccountRepository.findActiveIdsForMonth(monthStart, monthEnd).toSet()
+
+    private fun sumActiveBalances(
+        currentAmounts: Map<Long, BigDecimal>,
+        activeAccountIds: Set<Long>,
+    ): BigDecimal =
+        currentAmounts
+            .filter { (accountId, _) -> activeAccountIds.contains(accountId) }
+            .values
+            .fold(BigDecimal.ZERO) { acc, value -> acc.add(value) }
 }

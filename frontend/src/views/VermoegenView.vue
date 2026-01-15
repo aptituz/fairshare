@@ -12,22 +12,14 @@ SPDX-License-Identifier: GPL-3.0-only
   </v-row>
   <v-row class="align-center">
     <v-col cols="12" md="4">
-      <div class="text-caption">Zeitraum von</div>
-      <MonthYearPicker
-        :model-value="fromMonth"
-        :year-range="20"
-        @update:modelValue="(value) => (fromMonth = value)"
+      <v-select
+        v-model="selectedYear"
+        label="Jahr"
+        :items="yearOptions"
+        density="compact"
       />
     </v-col>
-    <v-col cols="12" md="4">
-      <div class="text-caption">Zeitraum bis</div>
-      <MonthYearPicker
-        :model-value="toMonth"
-        :year-range="20"
-        @update:modelValue="(value) => (toMonth = value)"
-      />
-    </v-col>
-    <v-col cols="12" md="4" class="d-flex flex-column align-end ga-3">
+    <v-col cols="12" md="8" class="d-flex flex-column align-end ga-3">
       <div class="text-right">
         <div class="text-caption">Aktueller Gesamtstand</div>
         <div class="text-h6">{{ formatCurrency(currentTotalBalance) }}</div>
@@ -64,17 +56,13 @@ SPDX-License-Identifier: GPL-3.0-only
       <v-card>
         <v-card-title>Kontostaende</v-card-title>
         <v-card-text>
-          <div v-for="group in groupedBalances" :key="group.month" class="mb-6">
+          <div
+            v-for="group in sortedMonthlyBalances"
+            :key="group.month"
+            class="mb-6"
+            :class="{ 'text-medium-emphasis': !group.balances.length }"
+          >
             <div class="text-subtitle-1 font-weight-medium mb-2">{{ group.month }}</div>
-            <div class="text-body-2 text-medium-emphasis mb-2 d-flex flex-wrap ga-2">
-              <span>Kontostand vor Monat: {{ monthlyActualTotalBeforeLabel(group.month) }}</span>
-              <span class="text-disabled">|</span>
-              <span>Kontostand nach Monat: {{ monthlyActualTotalAfterLabel(group.month) }}</span>
-              <span class="text-disabled">|</span>
-              <span>Erwartete Ersparnis: {{ monthlyExpectedSavedLabel(group.month) }}</span>
-              <span class="text-disabled">|</span>
-              <span>Tatsaechlich gespart: {{ monthlyActualSavedLabel(group.month) }}</span>
-            </div>
             <v-table density="compact" class="table-scroll">
               <thead>
                 <tr>
@@ -85,13 +73,13 @@ SPDX-License-Identifier: GPL-3.0-only
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="balance in group.items" :key="balance.rowKey">
-                  <td>{{ balanceLabel(balance) }}</td>
+                <tr v-for="balance in group.balances" :key="balance.id || balance.balanceDate">
+                  <td>{{ balance.balanceDate }}</td>
                   <td>{{ accountName(balance.savingsAccountId) }}</td>
                   <td class="text-right">{{ formatCurrency(balance.balanceAmount) }}</td>
                   <td class="text-right">
                     <v-btn
-                      v-if="!balance.isCarried"
+                      v-if="balance.id"
                       size="small"
                       variant="text"
                       icon
@@ -100,7 +88,7 @@ SPDX-License-Identifier: GPL-3.0-only
                       <v-icon icon="mdi-pencil" size="small" />
                     </v-btn>
                     <v-btn
-                      v-if="!balance.isCarried"
+                      v-if="balance.id"
                       size="small"
                       variant="text"
                       icon
@@ -109,6 +97,15 @@ SPDX-License-Identifier: GPL-3.0-only
                       <v-icon icon="mdi-delete" size="small" />
                     </v-btn>
                   </td>
+                </tr>
+                <tr
+                  class="font-weight-bold"
+                  :class="group.balances.length ? 'text-black' : 'text-medium-emphasis'"
+                >
+                  <td>Monatsende gesamt</td>
+                  <td />
+                  <td class="text-right">{{ formatCurrency(group.totalBalance) }}</td>
+                  <td />
                 </tr>
               </tbody>
             </v-table>
@@ -183,7 +180,7 @@ SPDX-License-Identifier: GPL-3.0-only
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { Line } from "vue-chartjs";
 import {
   Chart as ChartJS,
@@ -194,7 +191,6 @@ import {
   Tooltip,
   Legend
 } from "chart.js";
-import MonthYearPicker from "../components/MonthYearPicker.vue";
 
 ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Legend);
 
@@ -212,12 +208,10 @@ const props = defineProps({
 const formatMonth = (date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 const now = new Date();
-const currentMonth = formatMonth(now);
-const defaultStart = new Date(now.getFullYear(), now.getMonth() - 11, 1);
-const fromMonth = ref(formatMonth(defaultStart));
-const toMonth = ref(currentMonth);
+const defaultYear = Number(String(props.summaryMonth || "").slice(0, 4)) || now.getFullYear();
+const selectedYear = ref(defaultYear);
 const summaryData = ref([]);
-const balances = ref([]);
+const monthlyBalances = ref([]);
 const balanceDialogOpen = ref(false);
 const selectedAccountId = ref(null);
 const balanceDate = ref("");
@@ -229,20 +223,27 @@ const bulkBalances = ref([]);
 const defaultBalanceDate = ref(`${props.summaryMonth}-01`);
 
 const loadSummary = async () => {
-  summaryData.value = await props.fetchWealthSummary(fromMonth.value, toMonth.value);
+  summaryData.value = await props.fetchWealthSummary(selectedYear.value);
 };
 
 const loadBalances = async () => {
-  balances.value = await props.fetchWealthBalances();
+  monthlyBalances.value = await props.fetchWealthBalances(selectedYear.value);
 };
 
-watch([fromMonth, toMonth], () => {
-  loadSummary();
-}, { immediate: true });
-
-onMounted(() => {
-  loadBalances();
+const yearRange = 20;
+const yearOptions = computed(() => {
+  const current = now.getFullYear();
+  const years = [];
+  for (let offset = -yearRange; offset <= yearRange; offset += 1) {
+    years.push(current + offset);
+  }
+  return years;
 });
+
+watch(selectedYear, () => {
+  loadSummary();
+  loadBalances();
+}, { immediate: true });
 
 const chartData = computed(() => {
   if (!summaryData.value.length) {
@@ -306,115 +307,6 @@ const currentTotalBalance = computed(() => {
   return Number(last.totalBalance || 0);
 });
 
-const balanceEffectiveDate = (value) => {
-  const date = toDateValue(value);
-  if (!date) {
-    return null;
-  }
-  if (date.getDate() === 1) {
-    date.setDate(0);
-  }
-  return date;
-};
-
-const monthlyActualTotals = computed(() => {
-  const monthSet = new Set();
-  summaryData.value.forEach((entry) => monthSet.add(entry.month));
-  balances.value.forEach((balance) => {
-    if (balance.balanceDate) {
-      monthSet.add(String(balance.balanceDate).slice(0, 7));
-    }
-  });
-  const months = Array.from(monthSet).sort((a, b) => a.localeCompare(b));
-  const balancesWithEffectiveDate = balances.value.map((balance) => ({
-    ...balance,
-    effectiveDate: balanceEffectiveDate(balance.balanceDate)
-  }));
-  const totals = new Map();
-  months.forEach((month) => {
-    const monthEnd = toDateValue(monthToEndDate(month));
-    if (!monthEnd) {
-      totals.set(month, { before: 0, after: 0 });
-      return;
-    }
-    const monthStart = new Date(monthEnd.getFullYear(), monthEnd.getMonth(), 1);
-    const beforeDate = new Date(monthStart);
-    beforeDate.setDate(0);
-    const afterTotal = props.savingsAccounts
-      .filter((account) => isAccountActiveForDate(account, monthEnd.toISOString().slice(0, 10)))
-      .reduce((acc, account) => {
-        const latest = balancesWithEffectiveDate
-          .filter((balance) => balance.savingsAccountId === account.id)
-          .filter((balance) => balance.effectiveDate && balance.effectiveDate <= monthEnd)
-          .sort((a, b) => b.effectiveDate - a.effectiveDate)[0];
-        const amount = latest ? Number(latest.balanceAmount || 0) : 0;
-        return acc + amount;
-      }, 0);
-    const beforeTotal = props.savingsAccounts
-      .filter((account) => isAccountActiveForDate(account, beforeDate.toISOString().slice(0, 10)))
-      .reduce((acc, account) => {
-        const latest = balancesWithEffectiveDate
-          .filter((balance) => balance.savingsAccountId === account.id)
-          .filter((balance) => balance.effectiveDate && balance.effectiveDate <= beforeDate)
-          .sort((a, b) => b.effectiveDate - a.effectiveDate)[0];
-        const amount = latest ? Number(latest.balanceAmount || 0) : 0;
-        return acc + amount;
-      }, 0);
-    totals.set(month, { before: beforeTotal, after: afterTotal });
-  });
-  return totals;
-});
-
-const monthlySavedAmounts = computed(() => {
-  const sorted = [...summaryData.value].sort((a, b) => String(a.month).localeCompare(String(b.month)));
-  const map = new Map();
-  sorted.forEach((entry, index) => {
-    if (index === 0) {
-      map.set(entry.month, { expected: entry.expectedMonthlySavings ?? null, actual: null });
-      return;
-    }
-    const prev = sorted[index - 1];
-    const currentAfter = monthlyActualTotals.value.get(entry.month)?.after ?? 0;
-    const prevAfter = monthlyActualTotals.value.get(prev.month)?.after ?? 0;
-    const actual = Number(currentAfter) - Number(prevAfter);
-    const expected = entry.expectedMonthlySavings ?? null;
-    map.set(entry.month, { expected, actual });
-  });
-  return map;
-});
-
-const monthlyExpectedSavedLabel = (month) => {
-  const entry = monthlySavedAmounts.value.get(month);
-  if (!entry || entry.expected === null || entry.expected === undefined) {
-    return "-";
-  }
-  return props.formatCurrency(entry.expected);
-};
-
-const monthlyActualSavedLabel = (month) => {
-  const entry = monthlySavedAmounts.value.get(month);
-  if (!entry || entry.actual === null || entry.actual === undefined) {
-    return "-";
-  }
-  return props.formatCurrency(entry.actual);
-};
-
-const monthlyActualTotalBeforeLabel = (month) => {
-  const entry = monthlyActualTotals.value.get(month);
-  if (!entry) {
-    return "-";
-  }
-  return props.formatCurrency(entry.before);
-};
-
-const monthlyActualTotalAfterLabel = (month) => {
-  const entry = monthlyActualTotals.value.get(month);
-  if (!entry) {
-    return "-";
-  }
-  return props.formatCurrency(entry.after);
-};
-
 const accountName = (accountId) => {
   const match = props.savingsAccounts.find((account) => account.id === accountId);
   return match?.name || "Unbekannt";
@@ -456,77 +348,9 @@ const availableBulkAccounts = computed(() => {
   return props.savingsAccounts.filter((account) => isAccountActiveForDate(account, dateValue));
 });
 
-const balanceLabel = (balance) => {
-  if (balance.isCarried) {
-    return `Vortrag ${balance.sourceDate}`;
-  }
-  return balance.balanceDate;
-};
-
-const groupedBalances = computed(() => {
-  const byMonth = new Map();
-  balances.value.forEach((balance) => {
-    const month = String(balance.balanceDate).slice(0, 7);
-    if (!byMonth.has(month)) {
-      byMonth.set(month, []);
-    }
-    byMonth.get(month).push(balance);
-  });
-  const months = Array.from(byMonth.keys()).sort((a, b) => b.localeCompare(a));
-  return months.map((month) => {
-    const items = byMonth.get(month) || [];
-    const monthEnd = monthToEndDate(month);
-    const carried = props.savingsAccounts
-      .filter((account) => account?.id)
-      .filter((account) => isAccountActiveForDate(account, monthEnd))
-      .map((account) => {
-        const existing = items.find((entry) => entry.savingsAccountId === account.id);
-        if (existing) {
-          return null;
-        }
-        const prior = balances.value
-          .filter((entry) => entry.savingsAccountId === account.id)
-          .filter((entry) => entry.balanceDate <= monthEnd)
-          .sort((a, b) => String(b.balanceDate).localeCompare(String(a.balanceDate)))[0];
-        if (!prior) {
-          return null;
-        }
-        return {
-          rowKey: `carry-${account.id}-${month}`,
-          savingsAccountId: account.id,
-          balanceAmount: prior.balanceAmount,
-          balanceDate: monthEnd,
-          sourceDate: prior.balanceDate,
-          isCarried: true
-        };
-      })
-      .filter(Boolean);
-    const mapped = items.map((entry) => ({
-      ...entry,
-      rowKey: `entry-${entry.id}`,
-      isCarried: false
-    }));
-    const combined = [...mapped, ...carried].sort((a, b) => {
-      if (a.isCarried !== b.isCarried) {
-        return a.isCarried ? 1 : -1;
-      }
-      return String(b.balanceDate).localeCompare(String(a.balanceDate));
-    });
-    return { month, items: combined };
-  });
-});
-
-const monthToEndDate = (month) => {
-  if (!month) {
-    return "";
-  }
-  const [year, value] = month.split("-").map((part) => Number(part));
-  if (!year || !value) {
-    return "";
-  }
-  const lastDay = new Date(year, value, 0).getDate();
-  return `${year}-${String(value).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
-};
+const sortedMonthlyBalances = computed(() =>
+  monthlyBalances.value.slice().sort((a, b) => String(b.month).localeCompare(String(a.month)))
+);
 
 const balanceDialogTitle = computed(() =>
   editingBalanceId.value ? "Kontostand bearbeiten" : "Kontostand erfassen"

@@ -33,4 +33,9 @@ interface SavingsAccountBalanceRepository : JpaRepository<SavingsAccountBalance,
     ): List<SavingsAccountBalance>
 
     fun findAllByOrderByBalanceDateDescIdDesc(): List<SavingsAccountBalance>
+
+    fun findByBalanceDateBetweenOrderByBalanceDateDescIdDesc(
+        startDate: LocalDate,
+        endDate: LocalDate,
+    ): List<SavingsAccountBalance>
 }

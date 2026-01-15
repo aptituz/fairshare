@@ -7,6 +7,7 @@ package com.fairshare.controller
 
 import com.fairshare.dto.CreateSavingsAccountBalanceRequest
 import com.fairshare.dto.CreateSavingsAccountBalancesRequest
+import com.fairshare.dto.SavingsAccountBalanceMonthResponse
 import com.fairshare.dto.SavingsAccountBalanceResponse
 import com.fairshare.dto.SavingsAccountBalanceSummaryResponse
 import com.fairshare.exception.BadRequestException
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.http.HttpStatus
+import java.time.Year
 import java.time.YearMonth
 
 @RestController
@@ -46,18 +48,14 @@ class WealthController(
     ): List<SavingsAccountBalanceResponse> = savingsAccountBalanceService.createBulk(request)
 
     @GetMapping("/summary")
-    @Operation(summary = "Get total savings balance per month")
+    @Operation(summary = "Get total savings balance per month for a year")
     fun summary(
-        @Parameter(description = "Start month (YYYY-MM)")
-        @RequestParam from: String,
-        @Parameter(description = "End month (YYYY-MM)")
-        @RequestParam to: String,
+        @Parameter(description = "Year (YYYY)")
+        @RequestParam year: String,
     ): List<SavingsAccountBalanceSummaryResponse> {
-        val fromMonth = parseYearMonth(from)
-        val toMonth = parseYearMonth(to)
-        if (fromMonth.isAfter(toMonth)) {
-            throw BadRequestException("From month must be before to month")
-        }
+        val parsedYear = parseYear(year)
+        val fromMonth = YearMonth.of(parsedYear, 1)
+        val toMonth = YearMonth.of(parsedYear, 12)
         return savingsAccountBalanceService.monthlySummary(fromMonth, toMonth)
     }
 
@@ -65,6 +63,14 @@ class WealthController(
     @Operation(summary = "List recorded savings account balances")
     fun balances(): List<SavingsAccountBalanceResponse> =
         savingsAccountBalanceService.listBalances()
+
+    @GetMapping("/balances/monthly")
+    @Operation(summary = "List savings account balances grouped by month for a year")
+    fun balancesByMonth(
+        @Parameter(description = "Year (YYYY)")
+        @RequestParam year: String,
+    ): List<SavingsAccountBalanceMonthResponse> =
+        savingsAccountBalanceService.monthlyBalances(parseYear(year))
 
     @DeleteMapping("/balances/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -76,9 +82,9 @@ class WealthController(
     }
 }
 
-private fun parseYearMonth(value: String): YearMonth =
+private fun parseYear(value: String): Int =
     try {
-        YearMonth.parse(value)
+        Year.parse(value).value
     } catch (ex: Exception) {
-        throw BadRequestException("Invalid month format. Use YYYY-MM.")
+        throw BadRequestException("Invalid year format. Use YYYY.")
     }

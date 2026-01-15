@@ -77,21 +77,24 @@ export const useBudgetData = () => {
     savingsAccounts.value = await request("/api/savings-accounts");
   };
 
-  const fetchWealthSummary = async (fromMonth, toMonth) => {
-    if (!fromMonth || !toMonth) {
+  const fetchWealthSummary = async (year) => {
+    if (!year) {
       return [];
     }
     try {
-      return await request(`/api/wealth/summary?from=${fromMonth}&to=${toMonth}`);
+      return await request(`/api/wealth/summary?year=${year}`);
     } catch (err) {
       error.value = err?.message || "Vermoegensdaten konnten nicht geladen werden.";
       return [];
     }
   };
 
-  const fetchWealthBalances = async () => {
+  const fetchWealthBalances = async (year) => {
+    if (!year) {
+      return [];
+    }
     try {
-      return await request("/api/wealth/balances");
+      return await request(`/api/wealth/balances/monthly?year=${year}`);
     } catch (err) {
       error.value = err?.message || "Kontostaende konnten nicht geladen werden.";
       return [];
