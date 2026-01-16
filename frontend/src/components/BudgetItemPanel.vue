@@ -1022,6 +1022,7 @@ const historyChartOptions = computed(() => ({
   },
   scales: {
     y: {
+      beginAtZero: true,
       ticks: {
         callback: (value) => props.formatCurrency(value)
       }
