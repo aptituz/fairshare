@@ -107,6 +107,24 @@ SPDX-License-Identifier: GPL-3.0-only
                   <td class="text-right">{{ formatCurrency(group.totalBalance) }}</td>
                   <td />
                 </tr>
+                <tr>
+                  <td>
+                    erwartete Sparrate
+                    <br />
+                    <span class="text-caption text-medium-emphasis">(basierend auf Haushaltssaldo)</span>
+                  </td>
+                  <td />
+                  <td class="text-right">{{ formatCurrency(group.expectedMonthlySavings) }}</td>
+                  <td />
+                </tr>
+                <tr>
+                  <td>Tatsaechliche Sparrate</td>
+                  <td />
+                  <td class="text-right">
+                    {{ group.actualMonthlySavings == null ? "-" : formatCurrency(group.actualMonthlySavings) }}
+                  </td>
+                  <td />
+                </tr>
               </tbody>
             </v-table>
           </div>

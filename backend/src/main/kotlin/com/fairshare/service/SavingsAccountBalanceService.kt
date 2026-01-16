@@ -13,6 +13,7 @@ import com.fairshare.dto.SavingsAccountBalanceSummaryResponse
 import com.fairshare.exception.BadRequestException
 import com.fairshare.exception.NotFoundException
 import com.fairshare.mapper.toResponse
+import com.fairshare.model.SavingsAccount
 import com.fairshare.model.SavingsAccountBalance
 import com.fairshare.repo.SavingsAccountBalanceRepository
 import com.fairshare.repo.SavingsAccountRepository
@@ -72,13 +73,18 @@ class SavingsAccountBalanceService(
                 range.second.atEndOfMonth(),
             )
         val balancesByMonth = balances.groupBy { YearMonth.from(it.balanceDate).toString() }
+        var previousTotal: BigDecimal? = null
         return summaries.map { summary ->
             val monthBalances = balancesByMonth[summary.month].orEmpty().map { it.toResponse() }
+            val actualMonthlySavings =
+                previousTotal?.let { summary.totalBalance.subtract(it) }
             SavingsAccountBalanceMonthResponse(
                 month = summary.month,
                 totalBalance = summary.totalBalance,
+                expectedMonthlySavings = summary.expectedMonthlySavings,
+                actualMonthlySavings = actualMonthlySavings,
                 balances = monthBalances,
-            )
+            ).also { previousTotal = summary.totalBalance }
         }
     }
 

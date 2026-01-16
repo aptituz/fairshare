@@ -16,7 +16,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.InjectMocks
 import org.mockito.Mock
-import org.mockito.Mockito.any
 import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
 import java.math.BigDecimal
@@ -107,8 +106,22 @@ class SavingsAccountBalanceServiceTest {
                 LocalDate.of(2025, 3, 31),
             ),
         ).thenReturn(balances)
-        `when`(savingsAccountRepository.findActiveIdsForMonth(any(), any()))
-            .thenReturn(listOf(1L, 2L))
+        var cursor = from
+        while (!cursor.isAfter(to)) {
+            val activeIds =
+                if (cursor == YearMonth.of(2025, 2)) {
+                    listOf(1L, 2L)
+                } else {
+                    listOf(1L)
+                }
+            `when`(
+                savingsAccountRepository.findActiveIdsForMonth(
+                    cursor.atDay(1),
+                    cursor.atEndOfMonth(),
+                ),
+            ).thenReturn(activeIds)
+            cursor = cursor.plusMonths(1)
+        }
         `when`(budgetService.monthlyTotals(from, to)).thenReturn(householdBalances)
 
         val result = savingsAccountBalanceService.monthlySummary(from, to)
@@ -170,8 +183,16 @@ class SavingsAccountBalanceServiceTest {
                 LocalDate.of(2025, 12, 31),
             ),
         ).thenReturn(balances)
-        `when`(savingsAccountRepository.findActiveIdsForMonth(any(), any()))
-            .thenReturn(listOf(1L))
+        var monthCursor = from
+        while (!monthCursor.isAfter(to)) {
+            `when`(
+                savingsAccountRepository.findActiveIdsForMonth(
+                    monthCursor.atDay(1),
+                    monthCursor.atEndOfMonth(),
+                ),
+            ).thenReturn(listOf(1L))
+            monthCursor = monthCursor.plusMonths(1)
+        }
         `when`(budgetService.monthlyTotals(from, to)).thenReturn(householdBalances)
         `when`(
             savingsAccountBalanceRepository.findByBalanceDateBetweenOrderByBalanceDateDescIdDesc(
@@ -188,8 +209,12 @@ class SavingsAccountBalanceServiceTest {
         assertEquals(12, result.size)
         val january = result.first { it.month == "2025-01" }
         assertEquals(BigDecimal("200.00"), january.totalBalance)
+        assertEquals(BigDecimal("10.00"), january.expectedMonthlySavings)
+        assertEquals(null, january.actualMonthlySavings)
         assertEquals(1, january.balances.size)
         assertEquals(BigDecimal("200.00"), january.balances[0].balanceAmount)
+        val february = result.first { it.month == "2025-02" }
+        assertEquals(BigDecimal("100.00"), february.actualMonthlySavings)
         val march = result.first { it.month == "2025-03" }
         assertTrue(march.balances.isEmpty())
     }
