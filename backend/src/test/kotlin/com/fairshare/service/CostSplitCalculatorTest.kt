@@ -32,6 +32,10 @@ class CostSplitCalculatorTest {
         )
         val sharedHouseholdIncomeTotal = BigDecimal("1000.00")
         val sharedHouseholdExpenditureTotal = BigDecimal("1200.00")
+        val personalReserveTotals = mapOf<Long?, BigDecimal>(
+            1L to BigDecimal("120.00"),
+            2L to BigDecimal("180.00")
+        )
         // Net result of shared items is 1000 - 1200 = -200
         val sharedHouseholdBudgetBalanceWithoutOneTimeIncome = sharedHouseholdIncomeTotal
             .subtract(sharedHouseholdExpenditureTotal)
@@ -41,6 +45,7 @@ class CostSplitCalculatorTest {
             persons = persons,
             personalIncomeTotals = personalIncomeTotals,
             personalExpenseTotals = personalExpenseTotals,
+            personalReserveTotals = personalReserveTotals,
             sharedHouseholdIncomeTotal = sharedHouseholdIncomeTotal,
             sharedHouseholdExpenditureTotal = sharedHouseholdExpenditureTotal,
             sharedHouseholdBudgetBalanceWithoutOneTimeIncome = sharedHouseholdBudgetBalanceWithoutOneTimeIncome
@@ -65,6 +70,7 @@ class CostSplitCalculatorTest {
         assertEquals("Alice", aliceSplit!!.name)
         assertEquals(0, aliceSplit.personalIncome.compareTo(BigDecimal("2000.00")))
         assertEquals(0, aliceSplit.personalExpenses.compareTo(BigDecimal("500.00")))
+        assertEquals(0, aliceSplit.personalReserveShare.compareTo(BigDecimal("120.00")))
         // Usable income: 2000 - 500 = 1500
         assertEquals(0, aliceSplit.personalUsableIncome.compareTo(BigDecimal("1500.00")))
         // Her cost share: personal income (2000) - budget per person (-100) = 2100
@@ -76,6 +82,7 @@ class CostSplitCalculatorTest {
         assertEquals("Bob", bobSplit!!.name)
         assertEquals(0, bobSplit.personalIncome.compareTo(BigDecimal("3000.00")))
         assertEquals(0, bobSplit.personalExpenses.compareTo(BigDecimal("800.00")))
+        assertEquals(0, bobSplit.personalReserveShare.compareTo(BigDecimal("180.00")))
         // Usable income: 3000 - 800 = 2200
         assertEquals(0, bobSplit.personalUsableIncome.compareTo(BigDecimal("2200.00")))
         // His cost share: personal income (3000) - budget per person (-100) = 3100

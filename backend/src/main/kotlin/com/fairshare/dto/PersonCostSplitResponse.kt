@@ -12,6 +12,7 @@ data class PersonCostSplitResponse(
     val name: String,
     val personalIncome: BigDecimal,
     val personalExpenses: BigDecimal,
+    val personalReserveShare: BigDecimal,
     val personalUsableIncome: BigDecimal,
     val personalCostShare: BigDecimal,
     val personalContribution: BigDecimal,

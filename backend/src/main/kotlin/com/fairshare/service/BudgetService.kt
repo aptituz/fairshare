@@ -5,8 +5,10 @@
 
 package com.fairshare.service
 
+import com.fairshare.dto.MonthlyExpenseTotalResponse
 import com.fairshare.dto.MonthlySummaryResponse
 import com.fairshare.dto.MonthlyTotalsResponse
+import com.fairshare.dto.YearlyExpenseSummaryResponse
 import com.fairshare.dto.YearlySummaryResponse
 import com.fairshare.model.BudgetItemType
 import com.fairshare.repo.BudgetItemRepository
@@ -54,6 +56,18 @@ class BudgetService(
         return YearlySummaryResponse(year = year, months = monthlyTotals(from, to))
     }
 
+    fun yearlyExpenseSummary(
+        year: Int,
+        personId: Long?,
+    ): YearlyExpenseSummaryResponse {
+        val from = YearMonth.of(year, 1)
+        val to = YearMonth.of(year, 12)
+        return YearlyExpenseSummaryResponse(
+            year = year,
+            months = monthlyExpenseTotals(from, to, personId),
+        )
+    }
+
     fun monthlyTotals(
         from: YearMonth,
         to: YearMonth,
@@ -88,6 +102,35 @@ class BudgetService(
                 totalHouseholdIncome = totalIncome,
                 totalHouseholdExpenditure = totalExpense,
                 householdBudgetBalance = totalIncome.subtract(totalExpense),
+            )
+        }
+    }
+
+    fun monthlyExpenseTotals(
+        from: YearMonth,
+        to: YearMonth,
+        personId: Long?,
+    ): List<MonthlyExpenseTotalResponse> {
+        val months = mutableListOf<YearMonth>()
+        var cursor = from
+        while (!cursor.isAfter(to)) {
+            months.add(cursor)
+            cursor = cursor.plusMonths(1)
+        }
+        return months.map { month ->
+            val monthStart = month.atDay(1)
+            val monthEnd = month.atEndOfMonth()
+            val expenseItems =
+                budgetItemRepository.findEffectiveForMonthByPerson(
+                    BudgetItemType.EXPENSE,
+                    personId,
+                    monthStart,
+                    monthEnd,
+                )
+            val adjustedExpenseItems = applySuspensionsForMonth(expenseItems, monthStart, monthEnd)
+            MonthlyExpenseTotalResponse(
+                month = month.toString(),
+                totalExpense = sumMonthlyAmounts(adjustedExpenseItems),
             )
         }
     }

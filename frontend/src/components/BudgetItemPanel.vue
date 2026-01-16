@@ -23,6 +23,9 @@ SPDX-License-Identifier: GPL-3.0-only
           </v-list>
         </v-menu>
       </div>
+      <div v-if="showExpenseChart" class="mt-4" style="height: 180px;">
+        <Bar :data="expenseChartData" :options="expenseChartOptions" />
+      </div>
     </v-card-text>
     <v-divider />
     <div v-if="showFrequencyTable">
@@ -626,9 +629,10 @@ SPDX-License-Identifier: GPL-3.0-only
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
-import { Line } from "vue-chartjs";
+import { computed, ref, watch } from "vue";
+import { Bar, Line } from "vue-chartjs";
 import {
+  BarElement,
   Chart as ChartJS,
   LineElement,
   PointElement,
@@ -639,7 +643,7 @@ import {
 } from "chart.js";
 import MonthYearPicker from "./MonthYearPicker.vue";
 
-ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Legend);
+ChartJS.register(BarElement, LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Legend);
 
 const props = defineProps({
   title: { type: String, required: true },
@@ -650,6 +654,7 @@ const props = defineProps({
   persons: { type: Array, required: true },
   budgetItems: { type: Array, required: true },
   summaryMonth: { type: String, required: true },
+  fetchExpenseYearlySummary: { type: Function, required: true },
   saving: { type: Boolean, required: true },
   formatCurrency: { type: Function, required: true },
   categoryPathLabel: { type: Function, required: true },
@@ -716,6 +721,7 @@ const historyItems = ref([]);
 const historyLoading = ref(false);
 const historyItemName = ref("");
 const historyRootId = ref(null);
+const expenseYearlySummary = ref(null);
 
 const buttonLabel = computed(() =>
   props.type === "INCOME" ? "Einnahme hinzufügen" : "Ausgabe hinzufügen"
@@ -728,6 +734,91 @@ const showStartEndFields = computed(() => frequency.value !== "ONE_TIME");
 const showEditingStartEndFields = computed(() => editingFrequency.value !== "ONE_TIME");
 const showCorrectionForm = computed(() => props.type === "EXPENSE");
 const canSuspend = computed(() => props.type === "EXPENSE");
+const selectedYear = computed(() => Number(String(props.summaryMonth || "").slice(0, 4)));
+const highlightMonth = computed(() => String(props.summaryMonth || "").slice(5, 7));
+const showExpenseChart = computed(
+  () => props.type === "EXPENSE" && (expenseYearlySummary.value?.months?.length || 0) > 0
+);
+
+const expenseMonthNames = [
+  "Jan",
+  "Feb",
+  "Maerz",
+  "Apr",
+  "Mai",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Okt",
+  "Nov",
+  "Dez"
+];
+
+watch(
+  [selectedYear, () => props.fixedPersonId, () => props.type],
+  async ([year, personId, type]) => {
+    if (!year || type !== "EXPENSE") {
+      expenseYearlySummary.value = null;
+      return;
+    }
+    expenseYearlySummary.value = await props.fetchExpenseYearlySummary(year, personId ?? null);
+  },
+  { immediate: true }
+);
+
+const expenseChartData = computed(() => {
+  const months = expenseYearlySummary.value?.months || [];
+  if (!months.length) {
+    return null;
+  }
+  const labels = months.map((entry) => {
+    const index = Number(String(entry.month).slice(5, 7)) - 1;
+    return expenseMonthNames[index] || entry.month;
+  });
+  const baseColor = "#d32f2f";
+  const highlightColor = "#b71c1c";
+  const backgroundColor = months.map((entry) => {
+    const monthValue = String(entry.month).slice(5, 7);
+    return monthValue === highlightMonth.value ? highlightColor : baseColor;
+  });
+  return {
+    labels,
+    datasets: [
+      {
+        label: `Ausgaben ${selectedYear.value}`,
+        data: months.map((entry) => Number(entry.totalExpense || 0)),
+        backgroundColor
+      }
+    ]
+  };
+});
+
+const expenseChartOptions = computed(() => ({
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      callbacks: {
+        label: (context) => props.formatCurrency(context.parsed.y)
+      }
+    }
+  },
+  scales: {
+    y: {
+      beginAtZero: true,
+      ticks: {
+        callback: (value) => props.formatCurrency(value)
+      }
+    },
+    x: {
+      ticks: {
+        maxRotation: 0
+      }
+    }
+  }
+}));
 
 const sortedCategories = computed(() =>
   props.categories.slice().sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0))

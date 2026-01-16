@@ -66,6 +66,42 @@ interface BudgetItemRepository : JpaRepository<BudgetItem, Long> {
         """
         select b
         from BudgetItem b
+        where b.type = :type
+          and b.startDate <= :monthEnd
+          and (b.endDate is null or b.endDate >= :monthStart)
+          and ((:personId is null and b.person is null) or b.person.id = :personId)
+          and b.startDate = (
+            select max(b2.startDate)
+            from BudgetItem b2
+            where b2.rootBudgetItem = b.rootBudgetItem
+              and b2.type = :type
+              and ((:personId is null and b2.person is null) or b2.person.id = :personId)
+              and b2.startDate <= :monthEnd
+              and (b2.endDate is null or b2.endDate >= :monthStart)
+          )
+          and b.id = (
+            select max(b3.id)
+            from BudgetItem b3
+            where b3.rootBudgetItem = b.rootBudgetItem
+              and b3.type = :type
+              and ((:personId is null and b3.person is null) or b3.person.id = :personId)
+              and b3.startDate = b.startDate
+              and b3.startDate <= :monthEnd
+              and (b3.endDate is null or b3.endDate >= :monthStart)
+          )
+        """,
+    )
+    fun findEffectiveForMonthByPerson(
+        @Param("type") type: BudgetItemType,
+        @Param("personId") personId: Long?,
+        @Param("monthStart") monthStart: LocalDate,
+        @Param("monthEnd") monthEnd: LocalDate,
+    ): List<BudgetItem>
+
+    @Query(
+        """
+        select b
+        from BudgetItem b
         where b.startDate <= :monthEnd
           and (b.endDate is null or b.endDate >= :monthStart)
           and b.startDate = (

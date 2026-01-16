@@ -112,6 +112,15 @@ class MonthlySummaryCalculator(
         val sharedHouseholdExpenditureTotal = expensesByBudgetItem
             .filter { it.personId == null }
             .fold(BigDecimal.ZERO) { acc, item -> acc.add(item.monthlyAmount) }
+        val sharedHouseholdReserveShare =
+            expenseItems
+                .filter { it.person == null && it.frequency != Frequency.MONTHLY }
+                .let { sumMonthlyAmounts(it) }
+        val personalReserveTotals =
+            expenseItems
+                .filter { it.person?.id != null && it.frequency != Frequency.MONTHLY }
+                .groupBy { it.person!!.id }
+                .mapValues { (_, items) -> sumMonthlyAmounts(items) }
 
         val personalIncomeTotals =
             incomeByBudgetItem
@@ -132,6 +141,7 @@ class MonthlySummaryCalculator(
             persons = persons,
             personalIncomeTotals = personalIncomeTotals,
             personalExpenseTotals = personalExpenseTotals,
+            personalReserveTotals = personalReserveTotals,
             sharedHouseholdIncomeTotal = sharedHouseholdIncomeTotal,
             sharedHouseholdExpenditureTotal = sharedHouseholdExpenditureTotal,
             sharedHouseholdBudgetBalanceWithoutOneTimeIncome = sharedHouseholdBudgetBalanceWithoutOneTimeIncome
@@ -151,6 +161,7 @@ class MonthlySummaryCalculator(
             expensesByBudgetItem = expensesByBudgetItem,
             sharedHouseholdIncomeTotal = costSplitResult.sharedHouseholdIncomeTotal,
             sharedHouseholdExpenditureTotal = costSplitResult.sharedHouseholdExpenditureTotal,
+            sharedHouseholdReserveShare = sharedHouseholdReserveShare,
             budgetPerPerson = costSplitResult.budgetPerPerson,
             costSplit = costSplitResult.costSplit,
         )

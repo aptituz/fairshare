@@ -6,6 +6,7 @@
 package com.fairshare.controller
 
 import com.fairshare.dto.MonthlySummaryResponse
+import com.fairshare.dto.YearlyExpenseSummaryResponse
 import com.fairshare.dto.YearlySummaryResponse
 import com.fairshare.service.BudgetService
 import io.swagger.v3.oas.annotations.Operation
@@ -53,5 +54,20 @@ class BudgetController(
     ): YearlySummaryResponse {
         val targetYear = year ?: YearMonth.now().year
         return budgetService.yearlySummary(targetYear)
+    }
+
+    @GetMapping("/expenses/yearly")
+    @Transactional(readOnly = true)
+    @Operation(summary = "Get yearly expense totals for a person or shared expenses")
+    fun yearlyExpenses(
+        @Parameter(description = "Target year", example = "2026")
+        @RequestParam(required = false)
+        year: Int?,
+        @Parameter(description = "Person id (omit for shared expenses)")
+        @RequestParam(required = false)
+        personId: Long?,
+    ): YearlyExpenseSummaryResponse {
+        val targetYear = year ?: YearMonth.now().year
+        return budgetService.yearlyExpenseSummary(targetYear, personId)
     }
 }

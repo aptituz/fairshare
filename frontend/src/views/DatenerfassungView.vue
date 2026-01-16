@@ -23,6 +23,7 @@ SPDX-License-Identifier: GPL-3.0-only
         :persons="persons"
         :budgetItems="filteredBudgetItems(currentDatenerfassungView.type, currentDatenerfassungView.personId)"
         :summaryMonth="summaryMonth"
+        :fetchExpenseYearlySummary="fetchExpenseYearlySummary"
         :saving="budgetItemSaving"
         :formatCurrency="formatCurrency"
         :categoryPathLabel="categoryPathLabel"
@@ -54,6 +55,7 @@ const props = defineProps({
   persons: { type: Array, required: true },
   budgetItems: { type: Array, required: true },
   summaryMonth: { type: String, required: true },
+  fetchExpenseYearlySummary: { type: Function, required: true },
   budgetItemSaving: { type: Boolean, required: true },
   incomeCategoryOptions: { type: Array, required: true },
   expenseCategoryOptions: { type: Array, required: true },

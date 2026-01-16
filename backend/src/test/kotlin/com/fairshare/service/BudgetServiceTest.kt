@@ -9,6 +9,7 @@ import com.fairshare.dto.MonthlySummaryResponse
 import com.fairshare.model.BudgetItem
 import com.fairshare.model.BudgetItemType
 import com.fairshare.model.Category
+import com.fairshare.model.Frequency
 import com.fairshare.model.Person
 import com.fairshare.repo.BudgetItemRepository
 import com.fairshare.repo.BudgetItemSuspensionRepository
@@ -16,9 +17,11 @@ import com.fairshare.repo.PersonRepository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.mockito.ArgumentMatchers
 import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
+import org.mockito.Mockito.doAnswer
 import org.mockito.junit.jupiter.MockitoExtension
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -65,6 +68,7 @@ class BudgetServiceTest {
             expensesByBudgetItem = emptyList(),
             sharedHouseholdIncomeTotal = BigDecimal.ZERO,
             sharedHouseholdExpenditureTotal = BigDecimal.ZERO,
+            sharedHouseholdReserveShare = BigDecimal.ZERO,
             budgetPerPerson = BigDecimal.ZERO,
             costSplit = emptyList()
         )
@@ -84,5 +88,55 @@ class BudgetServiceTest {
 
         // then
         assertEquals(expectedResponse, result)
+    }
+
+    @Test
+    fun `yearlyExpenseSummary should return monthly totals for shared expenses`() {
+        val year = 2025
+        val janStart = LocalDate.of(2025, 1, 1)
+        val janEnd = LocalDate.of(2025, 1, 31)
+        val expenseItem =
+            BudgetItem(
+                id = 1,
+                name = "Ruecklage",
+                amount = BigDecimal("1200.00"),
+                type = BudgetItemType.EXPENSE,
+                frequency = Frequency.YEARLY,
+                planned = true,
+                categoryCorrection = false,
+                startDate = janStart,
+                endDate = null,
+                category = Category(1, "cat", BudgetItemType.EXPENSE, 1),
+                person = null,
+            )
+
+        doAnswer { invocation ->
+            val monthStart = invocation.getArgument<LocalDate>(2)
+            if (monthStart.monthValue == 1) {
+                listOf(expenseItem)
+            } else {
+                emptyList()
+            }
+        }.`when`(budgetItemRepository).findEffectiveForMonthByPerson(
+            ArgumentMatchers.eq(BudgetItemType.EXPENSE),
+            ArgumentMatchers.isNull(),
+            ArgumentMatchers.any(LocalDate::class.java),
+            ArgumentMatchers.any(LocalDate::class.java),
+        )
+        `when`(
+            budgetItemSuspensionRepository.findActiveForItemsAndMonth(
+                ArgumentMatchers.anyList(),
+                ArgumentMatchers.any(LocalDate::class.java),
+                ArgumentMatchers.any(LocalDate::class.java),
+            ),
+        ).thenReturn(emptyList())
+
+        val result = budgetService.yearlyExpenseSummary(year, null)
+
+        assertEquals(year, result.year)
+        val january = result.months.first { it.month == "2025-01" }
+        assertEquals(BigDecimal("100.00"), january.totalExpense)
+        val february = result.months.first { it.month == "2025-02" }
+        assertEquals(BigDecimal.ZERO, february.totalExpense)
     }
 }

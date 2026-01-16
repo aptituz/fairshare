@@ -34,6 +34,18 @@ SPDX-License-Identifier: GPL-3.0-only
         </template>
       </v-list-item>
       <v-list-item>
+        <v-list-item-title>
+          Ruecklagenanteil
+          <br />
+          <span class="text-caption text-medium-emphasis">
+            (Ueberweisung an Ruecklagenkonto sinnvoll)
+          </span>
+        </v-list-item-title>
+        <template #append>
+          <span>{{ formatCurrency(summary?.sharedHouseholdReserveShare) }}</span>
+        </template>
+      </v-list-item>
+      <v-list-item>
         <v-list-item-title>Haushaltssaldo (gemeinsam)</v-list-item-title>
         <template #append>
           <span>{{ formatCurrency(summary?.sharedHouseholdBudgetBalanceWithoutOneTimeIncome) }}</span>
@@ -57,6 +69,16 @@ SPDX-License-Identifier: GPL-3.0-only
             <div class="d-flex align-center justify-space-between">
               <span>Noetiger Selbstbehalt</span>
               <span>{{ formatCurrency(entry.personalExpenses) }}</span>
+            </div>
+            <div class="d-flex align-center justify-space-between">
+              <span>
+                Ruecklagenanteil
+                <br />
+                <span class="text-caption text-medium-emphasis">
+                  (Ueberweisung an Ruecklagenkonto sinnvoll)
+                </span>
+              </span>
+              <span>{{ formatCurrency(entry.personalReserveShare) }}</span>
             </div>
             <div class="d-flex align-center justify-space-between">
               <span>Fuer Haushaltsgeld verwendbares Einkommen</span>

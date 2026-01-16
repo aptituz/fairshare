@@ -75,6 +75,7 @@ SPDX-License-Identifier: GPL-3.0-only
       :persons="persons"
       :budgetItems="budgetItems"
       :summaryMonth="summaryMonth"
+      :fetchExpenseYearlySummary="fetchExpenseYearlySummary"
       :budgetItemSaving="budgetItemSaving"
       :incomeCategoryOptions="incomeCategoryOptions"
       :expenseCategoryOptions="expenseCategoryOptions"
@@ -162,6 +163,7 @@ const {
   deleteSavingsAccountBalance,
   createSavingsAccountBalancesBulk,
   fetchYearlySummary,
+  fetchExpenseYearlySummary,
   fetchMonthlySummaryForMonth,
   createBudgetItem,
   updateBudgetItem,

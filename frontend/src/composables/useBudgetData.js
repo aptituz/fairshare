@@ -113,6 +113,19 @@ export const useBudgetData = () => {
     }
   };
 
+  const fetchExpenseYearlySummary = async (year, personId) => {
+    if (!year) {
+      return null;
+    }
+    const personQuery = personId != null ? `&personId=${personId}` : "";
+    try {
+      return await request(`/api/budget/expenses/yearly?year=${year}${personQuery}`);
+    } catch (err) {
+      error.value = err?.message || "Ausgabenverlauf konnte nicht geladen werden.";
+      return null;
+    }
+  };
+
   const deleteSavingsAccountBalance = async (id) => {
     error.value = "";
     try {
@@ -833,6 +846,7 @@ export const useBudgetData = () => {
     importData,
     createSavingsAccountBalancesBulk,
     fetchYearlySummary,
+    fetchExpenseYearlySummary,
     fetchMonthlySummaryForMonth,
     createBudgetItem,
     updateBudgetItem,

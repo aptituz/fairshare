@@ -17,9 +17,10 @@ class CostSplitCalculator {
         persons: List<Person>,
         personalIncomeTotals: Map<Long?, BigDecimal>,
         personalExpenseTotals: Map<Long?, BigDecimal>,
+        personalReserveTotals: Map<Long?, BigDecimal>,
         sharedHouseholdIncomeTotal: BigDecimal,
         sharedHouseholdExpenditureTotal: BigDecimal,
-        sharedHouseholdBudgetBalanceWithoutOneTimeIncome: BigDecimal
+        sharedHouseholdBudgetBalanceWithoutOneTimeIncome: BigDecimal,
     ): CostSplitResult {
         val personalUsableIncomes = persons.associate { person ->
             val income = personalIncomeTotals[person.id] ?: BigDecimal.ZERO
@@ -34,6 +35,7 @@ class CostSplitCalculator {
         val costSplit = persons.map { person ->
             val income = personalIncomeTotals[person.id] ?: BigDecimal.ZERO
             val expenses = personalExpenseTotals[person.id] ?: BigDecimal.ZERO
+            val personalReserveShare = personalReserveTotals[person.id] ?: BigDecimal.ZERO
             val personalUsableIncome = personalUsableIncomes[person.id] ?: BigDecimal.ZERO
             val personalCostShare = income.subtract(budgetPerPerson)
 
@@ -47,6 +49,7 @@ class CostSplitCalculator {
                 name = person.name,
                 personalIncome = income,
                 personalExpenses = expenses,
+                personalReserveShare = personalReserveShare,
                 personalUsableIncome = personalUsableIncome,
                 personalCostShare = personalCostShare,
                 personalContribution = personalContribution,

@@ -15,12 +15,12 @@ SPDX-License-Identifier: GPL-3.0-only
 
   <v-row class="mt-6">
     <v-col cols="12">
-      <MonthlySummaryCard
-        :summary="summary"
-        :categories="categories"
-        :formatCurrency="formatCurrency"
-        :categoryRank="categoryRank"
-      />
+    <MonthlySummaryCard
+      :summary="summary"
+      :categories="categories"
+      :formatCurrency="formatCurrency"
+      :categoryRank="categoryRank"
+    />
     </v-col>
   </v-row>
 </template>
