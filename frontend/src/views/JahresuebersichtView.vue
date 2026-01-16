@@ -10,16 +10,6 @@ SPDX-License-Identifier: GPL-3.0-only
       <p class="text-body-2">Gesamtwerte fuer alle Monate des Jahres.</p>
     </v-col>
   </v-row>
-  <v-row class="align-center mb-4">
-    <v-col cols="12" md="4">
-      <v-select
-        v-model="selectedYear"
-        label="Jahr"
-        :items="yearOptions"
-        density="compact"
-      />
-    </v-col>
-  </v-row>
   <v-row>
     <v-col cols="12">
       <v-card>
@@ -111,22 +101,13 @@ const props = defineProps({
   categoryRank: { type: Function, required: true }
 });
 
-const now = new Date();
-const defaultYear = Number(String(props.summaryMonth || "").slice(0, 4)) || now.getFullYear();
-const selectedYear = ref(defaultYear);
+const selectedYear = computed(() =>
+  Number(String(props.summaryMonth || "").slice(0, 4)) || new Date().getFullYear()
+);
 const yearlySummary = ref(null);
 const expandedMonths = ref([]);
 const detailSummaries = ref({});
 const detailLoading = ref({});
-
-const yearOptions = computed(() => {
-  const current = now.getFullYear();
-  const years = [];
-  for (let offset = -5; offset <= 5; offset += 1) {
-    years.push(current + offset);
-  }
-  return years;
-});
 
 const monthNames = [
   "Januar",

@@ -107,6 +107,7 @@ SPDX-License-Identifier: GPL-3.0-only
           <MonthYearPicker
             :model-value="summaryMonth"
             :show-arrows="true"
+            :show-month="showMonthSelector"
             @update:modelValue="updateMonth"
           />
         </div>
@@ -136,6 +137,7 @@ SPDX-License-Identifier: GPL-3.0-only
         <MonthYearPicker
           :model-value="summaryMonth"
           :show-arrows="true"
+          :show-month="showMonthSelector"
           @update:modelValue="updateMonth"
         />
       </v-sheet>
@@ -185,6 +187,7 @@ const props = defineProps({
   datenerfassungNavItems: { type: Array, required: true },
   summary: { type: Object, default: null },
   summaryMonth: { type: String, required: true },
+  showMonthSelector: { type: Boolean, default: true },
   currentUsername: { type: String, default: "" },
   currentName: { type: String, default: "" },
   onChangePassword: { type: Function, required: true },

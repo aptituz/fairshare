@@ -21,6 +21,7 @@ SPDX-License-Identifier: GPL-3.0-only
     :datenerfassungNavItems="datenerfassungNavItems"
     :summary="summary"
     :summaryMonth="summaryMonth"
+    :showMonthSelector="showMonthSelector"
     :currentUsername="currentUsername"
     :currentName="currentName"
     :onChangePassword="changePassword"
@@ -230,6 +231,8 @@ const currentSubView = computed(() => {
   }
   return "income/shared";
 });
+
+const showMonthSelector = computed(() => route.meta?.showMonthSelector ?? true);
 
 const datenerfassungNavItems = computed(() => {
   const items = [

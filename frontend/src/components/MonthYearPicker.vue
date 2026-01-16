@@ -10,11 +10,12 @@ SPDX-License-Identifier: GPL-3.0-only
       icon
       size="small"
       variant="text"
-      @click="shiftMonth(-1)"
+      @click="shiftPeriod(-1)"
     >
       <v-icon icon="mdi-chevron-left" />
     </v-btn>
     <v-select
+      v-if="showMonth"
       v-model="selectedMonth"
       :items="monthOptions"
       item-title="label"
@@ -39,7 +40,7 @@ SPDX-License-Identifier: GPL-3.0-only
       icon
       size="small"
       variant="text"
-      @click="shiftMonth(1)"
+      @click="shiftPeriod(1)"
     >
       <v-icon icon="mdi-chevron-right" />
     </v-btn>
@@ -56,7 +57,8 @@ const props = defineProps({
   yearRange: { type: Number, default: 5 },
   allowEmpty: { type: Boolean, default: false },
   clearable: { type: Boolean, default: false },
-  showArrows: { type: Boolean, default: false }
+  showArrows: { type: Boolean, default: false },
+  showMonth: { type: Boolean, default: true }
 });
 
 const emit = defineEmits(["update:modelValue"]);
@@ -94,9 +96,9 @@ const yearOptions = computed(() => {
 });
 
 const emitValue = () => {
-  const monthValue = selectedMonth.value || "";
+  const monthValue = selectedMonth.value || currentMonth;
   const yearValue = selectedYear.value || "";
-  if (!monthValue || !yearValue) {
+  if (!yearValue || (props.showMonth && !monthValue)) {
     if (props.allowEmpty) {
       emit("update:modelValue", "");
     }
@@ -105,13 +107,17 @@ const emitValue = () => {
   emit("update:modelValue", `${yearValue}-${monthValue}`);
 };
 
-const shiftMonth = (delta) => {
+const shiftPeriod = (delta) => {
   const yearValue = selectedYear.value || currentYear;
   const monthValue = selectedMonth.value || currentMonth;
-  const date = new Date(Number(yearValue), Number(monthValue) - 1, 1);
-  date.setMonth(date.getMonth() + delta);
-  selectedYear.value = date.getFullYear();
-  selectedMonth.value = String(date.getMonth() + 1).padStart(2, "0");
+  if (props.showMonth) {
+    const date = new Date(Number(yearValue), Number(monthValue) - 1, 1);
+    date.setMonth(date.getMonth() + delta);
+    selectedYear.value = date.getFullYear();
+    selectedMonth.value = String(date.getMonth() + 1).padStart(2, "0");
+    return;
+  }
+  selectedYear.value = Number(yearValue) + delta;
 };
 
 watch(

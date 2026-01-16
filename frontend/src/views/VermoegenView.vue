@@ -11,15 +11,7 @@ SPDX-License-Identifier: GPL-3.0-only
     </v-col>
   </v-row>
   <v-row class="align-center">
-    <v-col cols="12" md="4">
-      <v-select
-        v-model="selectedYear"
-        label="Jahr"
-        :items="yearOptions"
-        density="compact"
-      />
-    </v-col>
-    <v-col cols="12" md="8" class="d-flex flex-column align-end ga-3">
+    <v-col cols="12" class="d-flex flex-column align-end ga-3">
       <div class="text-right">
         <div class="text-caption">Aktueller Gesamtstand</div>
         <div class="text-h6">{{ formatCurrency(currentTotalBalance) }}</div>
@@ -223,11 +215,9 @@ const props = defineProps({
   formatCurrency: { type: Function, required: true }
 });
 
-const formatMonth = (date) =>
-  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-const now = new Date();
-const defaultYear = Number(String(props.summaryMonth || "").slice(0, 4)) || now.getFullYear();
-const selectedYear = ref(defaultYear);
+const selectedYear = computed(() =>
+  Number(String(props.summaryMonth || "").slice(0, 4)) || new Date().getFullYear()
+);
 const summaryData = ref([]);
 const monthlyBalances = ref([]);
 const balanceDialogOpen = ref(false);
@@ -247,16 +237,6 @@ const loadSummary = async () => {
 const loadBalances = async () => {
   monthlyBalances.value = await props.fetchWealthBalances(selectedYear.value);
 };
-
-const yearRange = 20;
-const yearOptions = computed(() => {
-  const current = now.getFullYear();
-  const years = [];
-  for (let offset = -yearRange; offset <= yearRange; offset += 1) {
-    years.push(current + offset);
-  }
-  return years;
-});
 
 watch(selectedYear, () => {
   loadSummary();
