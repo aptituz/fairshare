@@ -56,6 +56,8 @@ export const useAuth = () => {
       ready.value = true;
     } catch (err) {
       error.value = err?.message || "Status konnte nicht geladen werden.";
+      setupRequired.value = false;
+      ready.value = false;
     } finally {
       loading.value = false;
     }
