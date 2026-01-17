@@ -615,3 +615,4 @@ databaseChangeLog:
             tableName: budget_items
             oldColumnName: due_month
             newColumnName: due_date
+            columnDataType: VARCHAR(7)
