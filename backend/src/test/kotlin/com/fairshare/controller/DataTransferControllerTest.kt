@@ -82,6 +82,7 @@ class DataTransferControllerTest(
                     categoryCorrection = false,
                     startDate = LocalDate.of(2025, 1, 1),
                     endDate = null,
+                    dueDate = null,
                     categoryId = 2,
                     personId = 1,
                     previousBudgetItemId = null,

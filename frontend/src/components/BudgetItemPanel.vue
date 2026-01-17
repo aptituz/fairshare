@@ -54,6 +54,9 @@ SPDX-License-Identifier: GPL-3.0-only
                   <div v-if="frequencyHint(budgetItem)" class="text-caption text-medium-emphasis">
                     ({{ frequencyHint(budgetItem) }})
                   </div>
+                  <div v-if="nextDueMonthHint(budgetItem)" class="text-caption text-medium-emphasis">
+                    {{ nextDueMonthHint(budgetItem) }}
+                  </div>
                 </td>
                 <td class="text-right">
                   <v-menu>
@@ -103,6 +106,12 @@ SPDX-License-Identifier: GPL-3.0-only
                         <v-list-item-title class="d-flex align-center ga-2">
                           <v-icon icon="mdi-chart-timeline-variant" size="small" />
                           Historie
+                        </v-list-item-title>
+                      </v-list-item>
+                      <v-list-item v-if="hasDueDates(budgetItem)" @click="openDueDatesDialog(budgetItem)">
+                        <v-list-item-title class="d-flex align-center ga-2">
+                          <v-icon icon="mdi-calendar-clock" size="small" />
+                          Faelligkeiten
                         </v-list-item-title>
                       </v-list-item>
                       <v-list-item @click="remove(budgetItem.id)">
@@ -182,6 +191,12 @@ SPDX-License-Identifier: GPL-3.0-only
                       Historie
                     </v-list-item-title>
                   </v-list-item>
+                  <v-list-item v-if="hasDueDates(budgetItem)" @click="openDueDatesDialog(budgetItem)">
+                    <v-list-item-title class="d-flex align-center ga-2">
+                      <v-icon icon="mdi-calendar-clock" size="small" />
+                      Faelligkeiten
+                    </v-list-item-title>
+                  </v-list-item>
                   <v-list-item @click="remove(budgetItem.id)">
                     <v-list-item-title class="d-flex align-center ga-2">
                       <v-icon icon="mdi-delete" size="small" />
@@ -229,6 +244,15 @@ SPDX-License-Identifier: GPL-3.0-only
               label="Monat"
               :year-range="20"
               @update:modelValue="updateOneTimeMonth"
+            />
+            <MonthYearPicker
+              v-if="showDueDateField"
+              :model-value="dueDate"
+              label="Erstes Faelligkeitsdatum"
+              :year-range="20"
+              :allow-empty="true"
+              :clearable="true"
+              @update:modelValue="updateDueDate"
             />
             <div v-if="showStartEndFields" class="text-caption">Beruecksichtigen ab</div>
             <MonthYearPicker
@@ -450,6 +474,15 @@ SPDX-License-Identifier: GPL-3.0-only
               :year-range="20"
               @update:modelValue="updateEditingOneTimeMonth"
             />
+            <MonthYearPicker
+              v-if="showEditingDueDateField"
+              :model-value="editingDueDate"
+              label="Erstes Faelligkeitsdatum"
+              :year-range="20"
+              :allow-empty="true"
+              :clearable="true"
+              @update:modelValue="updateEditingDueDate"
+            />
             <div v-if="showEditingStartEndFields" class="text-caption">Beruecksichtigen ab</div>
             <MonthYearPicker
               v-if="showEditingStartEndFields"
@@ -611,6 +644,28 @@ SPDX-License-Identifier: GPL-3.0-only
         </v-card-actions>
       </v-card>
     </v-dialog>
+    <v-dialog v-model="dueDatesDialogOpen" max-width="520">
+      <v-card>
+        <v-card-title>Faelligkeiten: {{ dueDatesItemName }}</v-card-title>
+        <v-card-text>
+          <div v-if="dueDatesLoading" class="py-6 text-center">Faelligkeiten werden geladen…</div>
+          <div v-else>
+            <div v-if="dueDatesEntries.length === 0" class="text-body-2">
+              Keine Faelligkeiten im gewaehlten Jahr.
+            </div>
+            <v-list v-else density="compact">
+              <v-list-item v-for="date in dueDatesEntries" :key="date">
+                <v-list-item-title>{{ date }}</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="dueDatesDialogOpen = false">Schliessen</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
     <v-dialog v-model="confirmOverrideOpen" max-width="420">
       <v-card>
         <v-card-title>Betrag aendern</v-card-title>
@@ -655,6 +710,7 @@ const props = defineProps({
   budgetItems: { type: Array, required: true },
   summaryMonth: { type: String, required: true },
   fetchExpenseYearlySummary: { type: Function, required: true },
+  fetchBudgetItemDueDates: { type: Function, required: true },
   saving: { type: Boolean, required: true },
   formatCurrency: { type: Function, required: true },
   categoryPathLabel: { type: Function, required: true },
@@ -682,6 +738,7 @@ const personId = ref(null);
 const frequency = ref("MONTHLY");
 const startMonth = ref(props.summaryMonth);
 const endMonth = ref("");
+const dueDate = ref("");
 const editingId = ref(null);
 const editingName = ref("");
 const editingAmount = ref("");
@@ -692,6 +749,7 @@ const editingFrequency = ref("MONTHLY");
 const editingOneTimeMonth = ref("");
 const editingStartMonth = ref("");
 const editingEndMonth = ref("");
+const editingDueDate = ref("");
 const createDialogOpen = ref(false);
 const editDialogOpen = ref(false);
 const confirmOverrideOpen = ref(false);
@@ -722,6 +780,10 @@ const historyLoading = ref(false);
 const historyItemName = ref("");
 const historyRootId = ref(null);
 const expenseYearlySummary = ref(null);
+const dueDatesDialogOpen = ref(false);
+const dueDatesLoading = ref(false);
+const dueDatesItemName = ref("");
+const dueDatesEntries = ref([]);
 
 const buttonLabel = computed(() =>
   props.type === "INCOME" ? "Einnahme hinzufügen" : "Ausgabe hinzufügen"
@@ -732,6 +794,12 @@ const showFrequencyPicker = computed(() => true);
 const showFrequencyTable = computed(() => props.type === "EXPENSE");
 const showStartEndFields = computed(() => frequency.value !== "ONE_TIME");
 const showEditingStartEndFields = computed(() => editingFrequency.value !== "ONE_TIME");
+const showDueDateField = computed(
+  () => ["QUARTERLY", "HALF_YEARLY", "YEARLY"].includes(frequency.value)
+);
+const showEditingDueDateField = computed(
+  () => ["QUARTERLY", "HALF_YEARLY", "YEARLY"].includes(editingFrequency.value)
+);
 const showCorrectionForm = computed(() => props.type === "EXPENSE");
 const canSuspend = computed(() => props.type === "EXPENSE");
 const selectedYear = computed(() => Number(String(props.summaryMonth || "").slice(0, 4)));
@@ -739,6 +807,7 @@ const highlightMonth = computed(() => String(props.summaryMonth || "").slice(5, 
 const showExpenseChart = computed(
   () => props.type === "EXPENSE" && (expenseYearlySummary.value?.months?.length || 0) > 0
 );
+const dueDateFrequencies = ["QUARTERLY", "HALF_YEARLY", "YEARLY"];
 
 const expenseMonthNames = [
   "Jan",
@@ -766,6 +835,18 @@ watch(
   },
   { immediate: true }
 );
+
+watch(frequency, () => {
+  if (!showDueDateField.value) {
+    dueDate.value = "";
+  }
+});
+
+watch(editingFrequency, () => {
+  if (!showEditingDueDateField.value) {
+    editingDueDate.value = "";
+  }
+});
 
 const expenseChartData = computed(() => {
   const months = expenseYearlySummary.value?.months || [];
@@ -955,6 +1036,42 @@ const frequencyHint = (budgetItem) => {
   return `${amount} ${suffix}`;
 };
 
+const nextDueMonthHint = (budgetItem) => {
+  if (!budgetItem || props.type !== "EXPENSE" || budgetItem.frequency === "MONTHLY") {
+    return "";
+  }
+  if (!budgetItem.nextDueMonth) {
+    return "";
+  }
+  return `Naechste Faelligkeit: ${formatMonthLabel(budgetItem.nextDueMonth)}`;
+};
+
+const formatMonthLabel = (value) => {
+  if (!value) {
+    return "";
+  }
+  const [year, month] = String(value).split("-");
+  const monthIndex = Number(month) - 1;
+  const monthNames = [
+    "Januar",
+    "Februar",
+    "Maerz",
+    "April",
+    "Mai",
+    "Juni",
+    "Juli",
+    "August",
+    "September",
+    "Oktober",
+    "November",
+    "Dezember"
+  ];
+  if (!year || Number.isNaN(monthIndex) || monthIndex < 0 || monthIndex > 11) {
+    return value;
+  }
+  return `${monthNames[monthIndex]} ${year}`;
+};
+
 const monthToDate = (value) => {
   if (!value) {
     return null;
@@ -1139,6 +1256,10 @@ const updateEndMonth = (value) => {
   endMonth.value = value;
 };
 
+const updateDueDate = (value) => {
+  dueDate.value = value || "";
+};
+
 const updateEditingOneTimeMonth = (value) => {
   editingOneTimeMonth.value = value;
 };
@@ -1151,10 +1272,15 @@ const updateEditingEndMonth = (value) => {
   editingEndMonth.value = value;
 };
 
+const updateEditingDueDate = (value) => {
+  editingDueDate.value = value || "";
+};
+
 const openCreateDialog = () => {
   startMonth.value = props.summaryMonth;
   oneTimeMonth.value = props.summaryMonth;
   endMonth.value = "";
+  dueDate.value = "";
   createDialogOpen.value = true;
 };
 
@@ -1201,6 +1327,23 @@ const openHistoryDialog = async (budgetItem) => {
   await fetchHistory(budgetItem.id);
 };
 
+const hasDueDates = (budgetItem) =>
+  Boolean(budgetItem?.dueDate) && dueDateFrequencies.includes(budgetItem.frequency);
+
+const openDueDatesDialog = async (budgetItem) => {
+  if (!budgetItem?.id) {
+    return;
+  }
+  dueDatesDialogOpen.value = true;
+  dueDatesItemName.value = budgetItem.name;
+  dueDatesEntries.value = [];
+  dueDatesLoading.value = true;
+  const year = selectedYear.value;
+  const response = await props.fetchBudgetItemDueDates(budgetItem.id, year);
+  dueDatesEntries.value = response?.dueDates || [];
+  dueDatesLoading.value = false;
+};
+
 const submit = async () => {
   const derivedName = showNameField.value ? name.value : categoryNameFor(categoryId.value);
   const effectivePersonId = props.showPersonSelector ? personId.value : props.fixedPersonId ?? null;
@@ -1218,7 +1361,8 @@ const submit = async () => {
     type: props.type,
     frequency: showFrequencyPicker.value ? frequency.value : null,
     startDate,
-    endDate
+    endDate,
+    dueDate: dueDate.value || null
   });
   if (success) {
     name.value = "";
@@ -1230,6 +1374,7 @@ const submit = async () => {
     oneTimeMonth.value = "";
     startMonth.value = props.summaryMonth;
     endMonth.value = "";
+    dueDate.value = "";
     createDialogOpen.value = false;
   }
 };
@@ -1326,6 +1471,7 @@ const startEdit = (budgetItem) => {
   editingCategorySearch.value = budgetItem.category?.name || "";
   editingPersonId.value = budgetItem.person?.id ?? null;
   editingFrequency.value = budgetItem.frequency || "MONTHLY";
+  editingDueDate.value = budgetItem.dueDate || "";
   editingOneTimeMonth.value = dateToMonth(budgetItem.startDate);
   editingStartMonth.value = dateToMonth(budgetItem.startDate);
   editingEndMonth.value = dateToMonth(budgetItem.endDate);
@@ -1343,6 +1489,7 @@ const cancelEdit = () => {
   editingOneTimeMonth.value = "";
   editingStartMonth.value = "";
   editingEndMonth.value = "";
+  editingDueDate.value = "";
   editDialogOpen.value = false;
   confirmOverrideOpen.value = false;
   pendingSaveId.value = null;
@@ -1397,7 +1544,9 @@ const saveEditWithMode = async (id, overrideForMonth) => {
     props.type,
     showFrequencyPicker.value ? editingFrequency.value : null,
     startDate,
-    endDate
+    endDate,
+    null,
+    editingDueDate.value || null
   );
   if (success) {
     cancelEdit();

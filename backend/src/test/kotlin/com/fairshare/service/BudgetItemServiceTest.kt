@@ -29,6 +29,7 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.anyList
 import org.mockito.ArgumentCaptor
 import org.mockito.InjectMocks
 import org.mockito.Mock
@@ -87,6 +88,55 @@ class BudgetItemServiceTest {
         // then
         assertEquals(1, result.size)
         assertEquals(BudgetItemType.INCOME, result[0].type)
+    }
+
+    @Test
+    fun `dueDatesForYear should return due dates based on first due date`() {
+        val budgetItem =
+            BudgetItem(
+                id = 1,
+                name = "Ruecklage",
+                amount = BigDecimal.TEN,
+                type = BudgetItemType.EXPENSE,
+                frequency = Frequency.QUARTERLY,
+                startDate = LocalDate.of(2024, 11, 1),
+                endDate = null,
+                dueDate = "2024-11",
+                category = Category(1, "cat", BudgetItemType.EXPENSE, 1),
+            )
+        `when`(
+            budgetItemRepository.findDueDateItemsForYear(
+                anyList(),
+                any(LocalDate::class.java),
+                any(LocalDate::class.java),
+            ),
+        ).thenReturn(listOf(budgetItem))
+
+        val result = budgetItemService.dueDatesForYear(2025)
+
+        val expected = listOf("2025-02", "2025-05", "2025-08", "2025-11")
+        assertEquals(1, result.size)
+        assertEquals(expected, result.first().dueDates)
+    }
+
+    @Test
+    fun `dueDatesForItem should respect the requested year`() {
+        val budgetItem =
+            BudgetItem(
+                id = 2,
+                name = "Versicherung",
+                amount = BigDecimal.ONE,
+                type = BudgetItemType.EXPENSE,
+                frequency = Frequency.YEARLY,
+                startDate = LocalDate.of(2020, 1, 1),
+                endDate = null,
+                dueDate = "2020-03",
+            )
+        `when`(budgetItemRepository.findById(2)).thenReturn(java.util.Optional.of(budgetItem))
+
+        val result = budgetItemService.dueDatesForItem(2, 2025)
+
+        assertEquals(listOf("2025-03"), result.dueDates)
     }
 
     @Test

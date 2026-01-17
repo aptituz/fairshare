@@ -7,6 +7,7 @@ package com.fairshare.repo
 
 import com.fairshare.model.BudgetItem
 import com.fairshare.model.BudgetItemType
+import com.fairshare.model.Frequency
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
@@ -181,6 +182,22 @@ interface BudgetItemRepository : JpaRepository<BudgetItem, Long> {
     )
     fun findHistoryByRootId(
         @Param("rootId") rootId: Long,
+    ): List<BudgetItem>
+
+    @Query(
+        """
+        select b
+        from BudgetItem b
+        where b.dueDate is not null
+          and b.frequency in :frequencies
+          and b.startDate <= :yearEnd
+          and (b.endDate is null or b.endDate >= :yearStart)
+        """,
+    )
+    fun findDueDateItemsForYear(
+        @Param("frequencies") frequencies: List<Frequency>,
+        @Param("yearStart") yearStart: LocalDate,
+        @Param("yearEnd") yearEnd: LocalDate,
     ): List<BudgetItem>
 
     @Query(

@@ -126,6 +126,30 @@ export const useBudgetData = () => {
     }
   };
 
+  const fetchDueDatesForYear = async (year) => {
+    if (!year) {
+      return [];
+    }
+    try {
+      return await request(`/api/budget-items/due-dates?year=${year}`);
+    } catch (err) {
+      error.value = err?.message || "Faelligkeiten konnten nicht geladen werden.";
+      return [];
+    }
+  };
+
+  const fetchBudgetItemDueDates = async (id, year) => {
+    if (!id || !year) {
+      return null;
+    }
+    try {
+      return await request(`/api/budget-items/${id}/due-dates?year=${year}`);
+    } catch (err) {
+      error.value = err?.message || "Faelligkeiten konnten nicht geladen werden.";
+      return null;
+    }
+  };
+
   const deleteSavingsAccountBalance = async (id) => {
     error.value = "";
     try {
@@ -520,7 +544,8 @@ export const useBudgetData = () => {
     frequency,
     startDate,
     endDate,
-    planned
+    planned,
+    dueDate
   }) => {
     const numericAmount = Number(amount);
     if (Number.isNaN(numericAmount)) {
@@ -552,7 +577,8 @@ export const useBudgetData = () => {
           frequency: frequency || null,
           startDate: startDate || null,
           endDate: endDate || null,
-          planned: planned ?? true
+          planned: planned ?? true,
+          dueDate: dueDate || null
         })
       });
       await refreshAll();
@@ -575,7 +601,8 @@ export const useBudgetData = () => {
     frequency,
     startDate,
     endDate,
-    planned
+    planned,
+    dueDate
   ) => {
     const trimmedName = name.trim();
     const numericAmount = Number(amount);
@@ -612,7 +639,8 @@ export const useBudgetData = () => {
           frequency: frequency || null,
           startDate: startDate || null,
           endDate: endDate || null,
-          planned: planned ?? null
+          planned: planned ?? null,
+          dueDate: dueDate || null
         })
       });
       await refreshAll();
@@ -847,6 +875,8 @@ export const useBudgetData = () => {
     createSavingsAccountBalancesBulk,
     fetchYearlySummary,
     fetchExpenseYearlySummary,
+    fetchDueDatesForYear,
+    fetchBudgetItemDueDates,
     fetchMonthlySummaryForMonth,
     createBudgetItem,
     updateBudgetItem,

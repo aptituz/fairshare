@@ -567,3 +567,51 @@ databaseChangeLog:
               - column:
                   name: end_date
                   type: DATE
+
+  - changeSet:
+      id: 019-add-budget-items-due-date
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        not:
+          columnExists:
+            tableName: budget_items
+            columnName: due_date
+      changes:
+        - addColumn:
+            tableName: budget_items
+            columns:
+              - column:
+                  name: due_date
+                  type: DATE
+
+  - changeSet:
+      id: 020-change-budget-items-due-date-to-month
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        columnExists:
+          tableName: budget_items
+          columnName: due_date
+      changes:
+        - addColumn:
+            tableName: budget_items
+            columns:
+              - column:
+                  name: due_month
+                  type: VARCHAR(7)
+        - sql:
+            dbms: postgresql
+            sql: |
+              update budget_items
+              set due_month = to_char(due_date, 'YYYY-MM')
+              where due_date is not null;
+        - dropColumn:
+            tableName: budget_items
+            columnName: due_date
+        - renameColumn:
+            tableName: budget_items
+            oldColumnName: due_month
+            newColumnName: due_date

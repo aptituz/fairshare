@@ -7,6 +7,7 @@ package com.fairshare.controller
 
 import com.fairshare.dto.BudgetItemOverrideRequest
 import com.fairshare.dto.BudgetItemHistoryEntryResponse
+import com.fairshare.dto.BudgetItemDueDatesResponse
 import com.fairshare.dto.BudgetItemResponse
 import com.fairshare.dto.CategoryCorrectionRequest
 import com.fairshare.dto.CreateBudgetItemRequest
@@ -95,6 +96,23 @@ class BudgetItemController(
     fun history(
         @PathVariable id: Long,
     ): List<BudgetItemHistoryEntryResponse> = budgetItemService.historyWithSuspensions(id)
+
+    @GetMapping("/due-dates")
+    @Operation(summary = "List due dates for recurring budget items")
+    fun dueDatesForYear(
+        @Parameter(description = "Year for which due dates are returned", example = "2025")
+        @RequestParam
+        year: Int,
+    ): List<BudgetItemDueDatesResponse> = budgetItemService.dueDatesForYear(year)
+
+    @GetMapping("/{id}/due-dates")
+    @Operation(summary = "Get due dates for a budget item")
+    fun dueDatesForItem(
+        @PathVariable id: Long,
+        @Parameter(description = "Year for which due dates are returned", example = "2025")
+        @RequestParam
+        year: Int,
+    ): BudgetItemDueDatesResponse = budgetItemService.dueDatesForItem(id, year)
 
     @DeleteMapping("/suspensions/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

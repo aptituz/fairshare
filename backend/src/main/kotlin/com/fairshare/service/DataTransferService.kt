@@ -87,6 +87,7 @@ class DataTransferService(
                     categoryCorrection = export.categoryCorrection,
                     startDate = export.startDate,
                     endDate = export.endDate,
+                    dueDate = export.dueDate,
                     category = category,
                     person = person,
                 )

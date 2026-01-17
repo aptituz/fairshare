@@ -58,6 +58,7 @@ class BudgetServiceTest {
             totalHouseholdIncome = BigDecimal.TEN,
             totalHouseholdIncomeRecurring = BigDecimal.TEN,
             totalHouseholdExpenditure = BigDecimal.ONE,
+            totalHouseholdDueExpenses = BigDecimal.ZERO,
             householdBudgetBalance = BigDecimal.TEN.subtract(BigDecimal.ONE),
             sharedHouseholdBudgetBalanceWithoutOneTimeIncome = BigDecimal.ZERO,
             expensesByCategory = emptyList(),
@@ -68,6 +69,8 @@ class BudgetServiceTest {
             expensesByBudgetItem = emptyList(),
             sharedHouseholdIncomeTotal = BigDecimal.ZERO,
             sharedHouseholdExpenditureTotal = BigDecimal.ZERO,
+            sharedHouseholdDueExpensesTotal = BigDecimal.ZERO,
+            personalHouseholdDueExpensesTotal = BigDecimal.ZERO,
             sharedHouseholdReserveShare = BigDecimal.ZERO,
             budgetPerPerson = BigDecimal.ZERO,
             costSplit = emptyList()
@@ -81,7 +84,8 @@ class BudgetServiceTest {
         `when`(budgetItemSuspensionRepository.findActiveForItemsAndMonth(listOf(2L), monthStart, monthEnd))
             .thenReturn(emptyList())
         `when`(personRepository.findAll()).thenReturn(persons)
-        `when`(monthlySummaryCalculator.calculate(incomeItems, expenseItems, persons)).thenReturn(expectedResponse)
+        `when`(monthlySummaryCalculator.calculate(incomeItems, expenseItems, month, persons))
+            .thenReturn(expectedResponse)
 
         // when
         val result = budgetService.monthlySummary(month)

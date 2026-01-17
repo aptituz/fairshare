@@ -95,7 +95,7 @@ const groupedExpensesByPerson = computed(() => {
     const entry = categoryMap.get(categoryKey);
     entry.total += Number(item.monthlyAmount || 0);
     entry.items.push(item);
-    if (item.frequency === "ONE_TIME") {
+    if (item.frequency === "ONE_TIME" || item.isDue) {
       entry.hasOneTime = true;
       entry.oneTimeDelta += Number(item.monthlyAmount || 0);
     }
@@ -137,7 +137,7 @@ const colorClassForAmount = (amount) => {
 };
 
 const expenseItemClass = (item) => {
-  if (item.frequency === "ONE_TIME") {
+  if (item.frequency === "ONE_TIME" || item.isDue) {
     return colorClassForAmount(item.monthlyAmount);
   }
   return "";

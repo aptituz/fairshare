@@ -46,6 +46,7 @@ fun BudgetItem.toExport(): BudgetItemExport =
         categoryCorrection = categoryCorrection,
         startDate = startDate,
         endDate = endDate,
+        dueDate = dueDate,
         categoryId = category?.id,
         personId = person?.id,
         previousBudgetItemId = previousBudgetItem?.id,

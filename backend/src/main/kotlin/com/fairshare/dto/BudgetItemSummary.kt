@@ -17,4 +17,5 @@ data class BudgetItemSummary(
     val categoryId: Long?,
     val categoryName: String,
     val frequency: Frequency,
+    val isDue: Boolean = false,
 )

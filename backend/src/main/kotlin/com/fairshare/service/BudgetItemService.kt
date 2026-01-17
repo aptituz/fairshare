@@ -8,6 +8,7 @@ package com.fairshare.service
 import com.fairshare.dto.BudgetItemOverrideRequest
 import com.fairshare.dto.BudgetItemHistoryEntryResponse
 import com.fairshare.dto.BudgetItemResponse
+import com.fairshare.dto.BudgetItemDueDatesResponse
 import com.fairshare.dto.BudgetItemValueChangeRequest
 import com.fairshare.dto.CategoryCorrectionRequest
 import com.fairshare.dto.CreateBudgetItemRequest
@@ -16,6 +17,7 @@ import com.fairshare.dto.SuspendBudgetItemRequest
 import com.fairshare.dto.UpdateBudgetItemRequest
 import com.fairshare.exception.BadRequestException
 import com.fairshare.exception.NotFoundException
+import com.fairshare.mapper.toDueDatesResponse
 import com.fairshare.mapper.toResponse
 import com.fairshare.model.BudgetItem
 import com.fairshare.model.BudgetItemSuspension
@@ -37,6 +39,13 @@ class BudgetItemService(
     private val categoryRepository: CategoryRepository,
     private val personRepository: PersonRepository,
 ) {
+    private val dueDateFrequencies =
+        listOf(
+            Frequency.QUARTERLY,
+            Frequency.HALF_YEARLY,
+            Frequency.YEARLY,
+        )
+
     fun list(
         type: BudgetItemType?,
         month: String?,
@@ -48,7 +57,7 @@ class BudgetItemService(
             val items =
                 type?.let { budgetItemRepository.findEffectiveForMonth(it, monthStart, monthEnd) }
                     ?: budgetItemRepository.findEffectiveForMonth(monthStart, monthEnd)
-            return applySuspensionsToResponses(items, monthStart, monthEnd)
+            return applySuspensionsToResponses(items, monthStart, monthEnd, parsedMonth)
         }
         val items = type?.let { budgetItemRepository.findByType(it) } ?: budgetItemRepository.findAll()
         return items.map { it.toResponse() }
@@ -83,6 +92,7 @@ class BudgetItemService(
                     categoryCorrection = item.categoryCorrection,
                     startDate = item.startDate,
                     endDate = item.endDate,
+                    dueDate = item.dueDate,
                     previousBudgetItemId = item.previousBudgetItem?.id,
                     rootBudgetItemId = item.rootBudgetItem?.id,
                     category = item.category?.toResponse(),
@@ -104,6 +114,7 @@ class BudgetItemService(
                     categoryCorrection = item.categoryCorrection,
                     startDate = suspension.startDate,
                     endDate = suspension.endDate,
+                    dueDate = item.dueDate,
                     previousBudgetItemId = item.previousBudgetItem?.id,
                     rootBudgetItemId = item.rootBudgetItem?.id,
                     category = item.category?.toResponse(),
@@ -118,6 +129,49 @@ class BudgetItemService(
                     .thenBy { if (it.isSuspension) 1 else 0 }
                     .thenBy { it.id ?: 0L },
             )
+    }
+
+    fun dueDatesForYear(year: Int): List<BudgetItemDueDatesResponse> {
+        val yearStart = LocalDate.of(year, 1, 1)
+        val yearEnd = LocalDate.of(year, 12, 31)
+        val items = budgetItemRepository.findDueDateItemsForYear(dueDateFrequencies, yearStart, yearEnd)
+        return items.mapNotNull { item ->
+            val dueDate = item.dueDate ?: return@mapNotNull null
+            val dueMonth = parseYearMonth(dueDate)
+            val dueDates = dueDatesForRange(item, dueMonth, yearStart, yearEnd)
+            if (dueDates.isEmpty()) {
+                null
+            } else {
+                item.toDueDatesResponse(
+                    dueMonth.toString(),
+                    dueDates.map { it.toString() },
+                )
+            }
+        }
+    }
+
+    fun dueDatesForItem(
+        id: Long,
+        year: Int,
+    ): BudgetItemDueDatesResponse {
+        val budgetItem =
+            budgetItemRepository.findById(id).orElseThrow {
+                NotFoundException("Budget item $id not found")
+            }
+        val dueDate =
+            budgetItem.dueDate
+                ?: throw BadRequestException("Budget item $id has no due date")
+        if (!dueDateFrequencies.contains(budgetItem.frequency)) {
+            throw BadRequestException("Budget item $id does not support due dates")
+        }
+        val yearStart = LocalDate.of(year, 1, 1)
+        val yearEnd = LocalDate.of(year, 12, 31)
+        val dueMonth = parseYearMonth(dueDate)
+        val dueDates = dueDatesForRange(budgetItem, dueMonth, yearStart, yearEnd)
+        return budgetItem.toDueDatesResponse(
+            dueMonth.toString(),
+            dueDates.map { it.toString() },
+        )
     }
 
     fun deleteSuspension(id: Long) {
@@ -145,6 +199,7 @@ class BudgetItemService(
         val frequency = request.frequency ?: Frequency.MONTHLY
         val startDate = request.startDate ?: LocalDate.now()
         val endDate = resolveEndDate(frequency, startDate, request.endDate)
+        val dueDate = resolveDueDate(frequency, request.dueDate)
         val planned = request.planned ?: true
         val saved =
             saveWithSelfRoot(
@@ -157,6 +212,7 @@ class BudgetItemService(
                     categoryCorrection = false,
                     startDate = startDate,
                     endDate = endDate,
+                    dueDate = dueDate,
                     category = category,
                     person = person,
                 ),
@@ -205,7 +261,58 @@ class BudgetItemService(
         val resolvedStartDate = request.startDate ?: budgetItem.startDate
         val resolvedFrequency = request.frequency ?: budgetItem.frequency
         budgetItem.endDate = resolveEndDate(resolvedFrequency, resolvedStartDate, request.endDate)
+        budgetItem.dueDate = resolveDueDate(resolvedFrequency, request.dueDate)
         return budgetItemRepository.save(budgetItem).toResponse()
+    }
+
+    private fun resolveDueDate(
+        frequency: Frequency,
+        dueDate: String?,
+    ): String? {
+        if (frequency == Frequency.MONTHLY || frequency == Frequency.ONE_TIME) {
+            return null
+        }
+        return dueDate?.let { parseYearMonth(it).toString() }
+    }
+
+    private fun dueDatesForRange(
+        item: BudgetItem,
+        dueDate: YearMonth,
+        rangeStart: LocalDate,
+        rangeEnd: LocalDate,
+    ): List<YearMonth> {
+        val intervalMonths =
+            when (item.frequency) {
+                Frequency.QUARTERLY -> 3
+                Frequency.HALF_YEARLY -> 6
+                Frequency.YEARLY -> 12
+                else -> return emptyList()
+            }
+        val activeStart = rangeStart
+        val activeEnd = minOf(rangeEnd, item.endDate ?: rangeEnd)
+        if (activeEnd.isBefore(activeStart)) {
+            return emptyList()
+        }
+        val startMonth = YearMonth.from(activeStart)
+        val endMonth = YearMonth.from(activeEnd)
+        var current = dueDate
+        if (current.isBefore(startMonth)) {
+            val monthsBetween =
+                (startMonth.year - current.year) * 12 + (startMonth.monthValue - current.monthValue)
+            val steps = monthsBetween / intervalMonths
+            current = current.plusMonths((steps * intervalMonths).toLong())
+            while (current.isBefore(startMonth)) {
+                current = current.plusMonths(intervalMonths.toLong())
+            }
+        }
+        val dates = mutableListOf<YearMonth>()
+        while (!current.isAfter(endMonth)) {
+            if (!current.isBefore(startMonth)) {
+                dates.add(current)
+            }
+            current = current.plusMonths(intervalMonths.toLong())
+        }
+        return dates
     }
 
     fun overrideForMonth(
@@ -573,16 +680,19 @@ class BudgetItemService(
         items: List<BudgetItem>,
         monthStart: LocalDate,
         monthEnd: LocalDate,
+        month: YearMonth,
     ): List<BudgetItemResponse> {
         val itemIds = items.mapNotNull { it.id }
         if (itemIds.isEmpty()) {
-            return items.map { it.toResponse() }
+            return items.map { item ->
+                item.toResponse(nextDueMonthFor(item, month))
+            }
         }
         val suspensions =
             budgetItemSuspensionRepository.findActiveForItemsAndMonth(itemIds, monthStart, monthEnd)
         val suspendedIds = suspensions.mapNotNull { it.budgetItem.id }.toSet()
         return items.map { item ->
-            val response = item.toResponse()
+            val response = item.toResponse(nextDueMonthFor(item, month))
             if (item.id != null && suspendedIds.contains(item.id)) {
                 response.copy(
                     amount = BigDecimal.ZERO,
@@ -593,6 +703,34 @@ class BudgetItemService(
                 response
             }
         }
+    }
+
+    private fun nextDueMonthFor(
+        item: BudgetItem,
+        month: YearMonth,
+    ): String? {
+        val dueDate = item.dueDate ?: return null
+        val intervalMonths =
+            when (item.frequency) {
+                Frequency.QUARTERLY -> 3
+                Frequency.HALF_YEARLY -> 6
+                Frequency.YEARLY -> 12
+                else -> return null
+            }
+        val dueMonth = parseYearMonth(dueDate)
+        if (month.isBefore(dueMonth)) {
+            return dueMonth.toString()
+        }
+        val monthsBetween =
+            (month.year - dueMonth.year) * 12 + (month.monthValue - dueMonth.monthValue)
+        val remainder = monthsBetween % intervalMonths
+        val offset = if (remainder == 0) 0 else intervalMonths - remainder
+        val nextMonth = month.plusMonths(offset.toLong())
+        val endMonth = item.endDate?.let { YearMonth.from(it) }
+        if (endMonth != null && nextMonth.isAfter(endMonth)) {
+            return null
+        }
+        return nextMonth.toString()
     }
 
     private fun saveWithSelfRoot(budgetItem: BudgetItem): BudgetItem {

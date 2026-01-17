@@ -8,7 +8,7 @@ package com.fairshare.mapper
 import com.fairshare.dto.BudgetItemResponse
 import com.fairshare.model.BudgetItem
 
-fun BudgetItem.toResponse(): BudgetItemResponse =
+fun BudgetItem.toResponse(nextDueMonth: String? = null): BudgetItemResponse =
     BudgetItemResponse(
         id = id,
         name = name,
@@ -21,6 +21,8 @@ fun BudgetItem.toResponse(): BudgetItemResponse =
         categoryCorrection = categoryCorrection,
         startDate = startDate,
         endDate = endDate,
+        dueDate = dueDate,
+        nextDueMonth = nextDueMonth,
         previousBudgetItemId = previousBudgetItem?.id,
         rootBudgetItemId = rootBudgetItem?.id,
         category = category?.toResponse(),

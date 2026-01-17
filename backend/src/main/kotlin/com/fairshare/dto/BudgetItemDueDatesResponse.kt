@@ -10,15 +10,16 @@ import com.fairshare.model.Frequency
 import java.math.BigDecimal
 import java.time.LocalDate
 
-data class CreateBudgetItemRequest(
+data class BudgetItemDueDatesResponse(
+    val budgetItemId: Long,
     val name: String,
     val amount: BigDecimal,
     val type: BudgetItemType,
-    val categoryId: Long?,
-    val personId: Long? = null,
-    val frequency: Frequency? = null,
-    val planned: Boolean? = null,
-    val startDate: LocalDate? = null,
-    val endDate: LocalDate? = null,
-    val dueDate: String? = null,
+    val frequency: Frequency,
+    val dueDate: String,
+    val startDate: LocalDate,
+    val endDate: LocalDate?,
+    val category: CategoryResponse?,
+    val person: PersonResponse?,
+    val dueDates: List<String>,
 )

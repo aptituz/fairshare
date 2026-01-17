@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.math.BigDecimal
 import java.time.LocalDate
+import java.time.YearMonth
 
 class MonthlySummaryCalculatorTest {
     private val calculator = MonthlySummaryCalculator(CostSplitCalculator())
@@ -34,7 +35,7 @@ class MonthlySummaryCalculatorTest {
                 budgetItem("Shared", "1000.00", BudgetItemType.EXPENSE, null),
             )
 
-        val summary = calculator.calculate(incomeItems, expenseItems, listOf(personA, personB))
+        val summary = calculator.calculate(incomeItems, expenseItems, YearMonth.of(2025, 3), listOf(personA, personB))
 
         assertBigDecimalEquals("2000.00", summary.budgetPerPerson)
         assertBigDecimalEquals("4000.00", summary.sharedHouseholdBudgetBalanceWithoutOneTimeIncome)
@@ -68,7 +69,7 @@ class MonthlySummaryCalculatorTest {
                 budgetItem("Shared", "2900.00", BudgetItemType.EXPENSE, null),
             )
 
-        val summary = calculator.calculate(incomeItems, expenseItems, listOf(personA, personB))
+        val summary = calculator.calculate(incomeItems, expenseItems, YearMonth.of(2025, 3), listOf(personA, personB))
 
         assertBigDecimalEquals("300.00", summary.budgetPerPerson)
         assertBigDecimalEquals("600.00", summary.sharedHouseholdBudgetBalanceWithoutOneTimeIncome)

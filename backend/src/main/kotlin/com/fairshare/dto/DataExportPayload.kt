@@ -45,6 +45,7 @@ data class BudgetItemExport(
     val categoryCorrection: Boolean,
     val startDate: LocalDate,
     val endDate: LocalDate?,
+    val dueDate: String?,
     val categoryId: Long?,
     val personId: Long?,
     val previousBudgetItemId: Long?,

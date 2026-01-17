@@ -44,6 +44,8 @@ class BudgetItem(
     var startDate: LocalDate = LocalDate.now(),
     @Column(name = "end_date")
     var endDate: LocalDate? = null,
+    @Column(name = "due_date", length = 7)
+    var dueDate: String? = null,
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     var category: Category? = null,

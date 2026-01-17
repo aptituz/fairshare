@@ -24,13 +24,16 @@ class MonthlySummaryCalculator(
     fun calculate(
         incomeItems: List<BudgetItem>,
         expenseItems: List<BudgetItem>,
+        month: java.time.YearMonth,
         persons: List<Person>,
     ): MonthlySummaryResponse {
+        val dueExpenses = dueExpensesForMonth(expenseItems, month)
+        val totalDueExpenses = dueExpenses.fold(BigDecimal.ZERO) { acc, item -> acc.add(item.amount) }
         val totalHouseholdIncome = sumMonthlyAmounts(incomeItems)
         val totalHouseholdIncomeRecurring = incomeItems
             .filter { !(it.frequency == Frequency.ONE_TIME && !it.planned) }
             .let { sumMonthlyAmounts(it) }
-        val totalHouseholdExpenditure = sumMonthlyAmounts(expenseItems)
+        val totalHouseholdExpenditure = sumMonthlyAmounts(expenseItems).add(totalDueExpenses)
 
         val incomeByPerson =
             incomeItems
@@ -70,19 +73,17 @@ class MonthlySummaryCalculator(
                 }.sortedBy { it.budgetItemName.lowercase() }
 
         val expensesByBudgetItem =
-            expenseItems
-                .map {
-                    BudgetItemSummary(
-                        budgetItemId = it.id,
-                        budgetItemName = it.name,
-                        monthlyAmount = it.monthlyAmount(),
-                        personId = it.person?.id,
-                        personName = it.person?.name ?: "Gemeinsam",
-                        categoryId = it.category?.id,
-                        categoryName = it.category?.name ?: "Uncategorized",
-                        frequency = it.frequency,
-                    )
-                }.sortedBy { it.budgetItemName.lowercase() }
+            (
+                expenseItems.map { it.toSummary(it.monthlyAmount()) } +
+                    dueExpenses.map {
+                        it.toSummary(
+                            amount = it.amount,
+                            nameOverride = "${it.name} (faellig)",
+                            isDue = true,
+                        )
+                    }
+                )
+                .sortedBy { it.budgetItemName.lowercase() }
 
         val expensesByPerson =
             expenseItems
@@ -110,8 +111,14 @@ class MonthlySummaryCalculator(
             .filter { it.personId == null }
             .fold(BigDecimal.ZERO) { acc, item -> acc.add(item.monthlyAmount) }
         val sharedHouseholdExpenditureTotal = expensesByBudgetItem
-            .filter { it.personId == null }
+            .filter { it.personId == null && !it.isDue }
             .fold(BigDecimal.ZERO) { acc, item -> acc.add(item.monthlyAmount) }
+        val sharedHouseholdDueExpensesTotal = dueExpenses
+            .filter { it.person == null }
+            .fold(BigDecimal.ZERO) { acc, item -> acc.add(item.amount) }
+        val personalHouseholdDueExpensesTotal = dueExpenses
+            .filter { it.person != null }
+            .fold(BigDecimal.ZERO) { acc, item -> acc.add(item.amount) }
         val sharedHouseholdReserveShare =
             expenseItems
                 .filter { it.person == null && it.frequency != Frequency.MONTHLY }
@@ -130,7 +137,7 @@ class MonthlySummaryCalculator(
 
         val personalExpenseTotals =
             expensesByBudgetItem
-                .filter { it.personId != null }
+                .filter { it.personId != null && !it.isDue }
                 .groupBy { it.personId }
                 .mapValues { (_, items) -> items.fold(BigDecimal.ZERO) { acc, item -> acc.add(item.monthlyAmount) } }
 
@@ -151,6 +158,7 @@ class MonthlySummaryCalculator(
             totalHouseholdIncome = totalHouseholdIncome,
             totalHouseholdIncomeRecurring = totalHouseholdIncomeRecurring,
             totalHouseholdExpenditure = totalHouseholdExpenditure,
+            totalHouseholdDueExpenses = totalDueExpenses,
             householdBudgetBalance = totalHouseholdIncome.subtract(totalHouseholdExpenditure),
             sharedHouseholdBudgetBalanceWithoutOneTimeIncome = sharedHouseholdBudgetBalanceWithoutOneTimeIncome,
             expensesByCategory = expensesByCategory,
@@ -161,12 +169,50 @@ class MonthlySummaryCalculator(
             expensesByBudgetItem = expensesByBudgetItem,
             sharedHouseholdIncomeTotal = costSplitResult.sharedHouseholdIncomeTotal,
             sharedHouseholdExpenditureTotal = costSplitResult.sharedHouseholdExpenditureTotal,
+            sharedHouseholdDueExpensesTotal = sharedHouseholdDueExpensesTotal,
+            personalHouseholdDueExpensesTotal = personalHouseholdDueExpensesTotal,
             sharedHouseholdReserveShare = sharedHouseholdReserveShare,
             budgetPerPerson = costSplitResult.budgetPerPerson,
             costSplit = costSplitResult.costSplit,
         )
     }
 }
+
+private fun BudgetItem.toSummary(
+    amount: BigDecimal,
+    nameOverride: String? = null,
+    isDue: Boolean = false,
+): BudgetItemSummary =
+    BudgetItemSummary(
+        budgetItemId = id,
+        budgetItemName = nameOverride ?: name,
+        monthlyAmount = amount,
+        personId = person?.id,
+        personName = person?.name ?: "Gemeinsam",
+        categoryId = category?.id,
+        categoryName = category?.name ?: "Uncategorized",
+        frequency = frequency,
+        isDue = isDue,
+    )
+
+private fun dueExpensesForMonth(
+    items: List<BudgetItem>,
+    month: java.time.YearMonth,
+): List<BudgetItem> =
+    items.filter { item ->
+        val dueDate = item.dueDate ?: return@filter false
+        val intervalMonths =
+            when (item.frequency) {
+                Frequency.QUARTERLY -> 3
+                Frequency.HALF_YEARLY -> 6
+                Frequency.YEARLY -> 12
+                else -> return@filter false
+            }
+        val dueMonth = java.time.YearMonth.parse(dueDate)
+        val monthsBetween =
+            (month.year - dueMonth.year) * 12 + (month.monthValue - dueMonth.monthValue)
+        monthsBetween >= 0 && monthsBetween % intervalMonths == 0
+    }
 
 private fun categoryKey(item: BudgetItem): CategoryKey =
     CategoryKey(

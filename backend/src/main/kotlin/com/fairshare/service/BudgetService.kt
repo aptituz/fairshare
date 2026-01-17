@@ -47,7 +47,7 @@ class BudgetService(
         val adjustedIncomeItems = applySuspensionsForMonth(incomeItems, monthStart, monthEnd)
         val adjustedExpenseItems = applySuspensionsForMonth(expenseItems, monthStart, monthEnd)
         val persons = personRepository.findAll()
-        return monthlySummaryCalculator.calculate(adjustedIncomeItems, adjustedExpenseItems, persons)
+        return monthlySummaryCalculator.calculate(adjustedIncomeItems, adjustedExpenseItems, month, persons)
     }
 
     fun yearlySummary(year: Int): YearlySummaryResponse {
@@ -96,7 +96,9 @@ class BudgetService(
             val adjustedIncomeItems = applySuspensionsForMonth(incomeItems, monthStart, monthEnd)
             val adjustedExpenseItems = applySuspensionsForMonth(expenseItems, monthStart, monthEnd)
             val totalIncome = sumMonthlyAmounts(adjustedIncomeItems)
-            val totalExpense = sumMonthlyAmounts(adjustedExpenseItems)
+            val dueExpenseTotal = dueExpensesForMonth(adjustedExpenseItems, month)
+                .fold(BigDecimal.ZERO) { acc, item -> acc.add(item.amount) }
+            val totalExpense = sumMonthlyAmounts(adjustedExpenseItems).add(dueExpenseTotal)
             MonthlyTotalsResponse(
                 month = month.toString(),
                 totalHouseholdIncome = totalIncome,
@@ -128,12 +130,33 @@ class BudgetService(
                     monthEnd,
                 )
             val adjustedExpenseItems = applySuspensionsForMonth(expenseItems, monthStart, monthEnd)
+            val dueExpenseTotal = dueExpensesForMonth(adjustedExpenseItems, month)
+                .fold(BigDecimal.ZERO) { acc, item -> acc.add(item.amount) }
             MonthlyExpenseTotalResponse(
                 month = month.toString(),
-                totalExpense = sumMonthlyAmounts(adjustedExpenseItems),
+                totalExpense = sumMonthlyAmounts(adjustedExpenseItems).add(dueExpenseTotal),
             )
         }
     }
+
+    private fun dueExpensesForMonth(
+        items: List<com.fairshare.model.BudgetItem>,
+        month: YearMonth,
+    ): List<com.fairshare.model.BudgetItem> =
+        items.filter { item ->
+            val dueDate = item.dueDate ?: return@filter false
+            val intervalMonths =
+                when (item.frequency) {
+                    com.fairshare.model.Frequency.QUARTERLY -> 3
+                    com.fairshare.model.Frequency.HALF_YEARLY -> 6
+                    com.fairshare.model.Frequency.YEARLY -> 12
+                    else -> return@filter false
+                }
+            val dueMonth = YearMonth.parse(dueDate)
+            val monthsBetween =
+                (month.year - dueMonth.year) * 12 + (month.monthValue - dueMonth.monthValue)
+            monthsBetween >= 0 && monthsBetween % intervalMonths == 0
+        }
 
     private fun applySuspensionsForMonth(
         items: List<com.fairshare.model.BudgetItem>,

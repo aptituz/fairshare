@@ -22,6 +22,8 @@ data class BudgetItemResponse(
     val categoryCorrection: Boolean,
     val startDate: LocalDate,
     val endDate: LocalDate?,
+    val dueDate: String?,
+    val nextDueMonth: String? = null,
     val previousBudgetItemId: Long?,
     val rootBudgetItemId: Long?,
     val category: CategoryResponse?,

@@ -20,6 +20,7 @@ data class BudgetItemHistoryEntryResponse(
     val categoryCorrection: Boolean,
     val startDate: LocalDate,
     val endDate: LocalDate?,
+    val dueDate: String?,
     val previousBudgetItemId: Long?,
     val rootBudgetItemId: Long?,
     val category: CategoryResponse?,

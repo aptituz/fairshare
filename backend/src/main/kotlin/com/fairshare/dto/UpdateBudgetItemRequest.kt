@@ -18,4 +18,5 @@ data class UpdateBudgetItemRequest(
     val planned: Boolean? = null,
     val startDate: LocalDate? = null,
     val endDate: LocalDate? = null,
+    val dueDate: String? = null,
 )

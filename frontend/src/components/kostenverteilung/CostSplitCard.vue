@@ -34,6 +34,18 @@ SPDX-License-Identifier: GPL-3.0-only
         </template>
       </v-list-item>
       <v-list-item>
+        <v-list-item-title>Faellige Ausgaben (gemeinsam)</v-list-item-title>
+        <template #append>
+          <span>{{ formatCurrency(summary?.sharedHouseholdDueExpensesTotal) }}</span>
+        </template>
+      </v-list-item>
+      <v-list-item>
+        <v-list-item-title>Faellige Ausgaben (persoenlich)</v-list-item-title>
+        <template #append>
+          <span>{{ formatCurrency(summary?.personalHouseholdDueExpensesTotal) }}</span>
+        </template>
+      </v-list-item>
+      <v-list-item>
         <v-list-item-title>
           Ruecklagenanteil
           <br />
