@@ -119,13 +119,22 @@ class MonthlySummaryCalculator(
         val personalHouseholdDueExpensesTotal = dueExpenses
             .filter { it.person != null }
             .fold(BigDecimal.ZERO) { acc, item -> acc.add(item.amount) }
+        val reserveItems =
+            expenseItems.filter { item ->
+                when (item.frequency) {
+                    Frequency.QUARTERLY,
+                    Frequency.HALF_YEARLY,
+                    Frequency.YEARLY -> true
+                    else -> false
+                }
+            }
         val sharedHouseholdReserveShare =
-            expenseItems
-                .filter { it.person == null && it.frequency != Frequency.MONTHLY }
+            reserveItems
+                .filter { it.person == null }
                 .let { sumMonthlyAmounts(it) }
         val personalReserveTotals =
-            expenseItems
-                .filter { it.person?.id != null && it.frequency != Frequency.MONTHLY }
+            reserveItems
+                .filter { it.person?.id != null }
                 .groupBy { it.person!!.id }
                 .mapValues { (_, items) -> sumMonthlyAmounts(items) }
 
