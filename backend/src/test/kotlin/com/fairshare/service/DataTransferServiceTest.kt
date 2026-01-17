@@ -27,8 +27,6 @@ import com.fairshare.repo.CategoryRepository
 import com.fairshare.repo.PersonRepository
 import com.fairshare.repo.SavingsAccountBalanceRepository
 import com.fairshare.repo.SavingsAccountRepository
-import java.math.BigDecimal
-import java.time.LocalDate
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -43,10 +41,11 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
+import java.math.BigDecimal
+import java.time.LocalDate
 
 @ExtendWith(MockitoExtension::class)
 class DataTransferServiceTest {
-
     @Mock
     lateinit var personRepository: PersonRepository
 
@@ -72,38 +71,42 @@ class DataTransferServiceTest {
     fun `export should return mapped data`() {
         val person = Person(2, "Alex", "alex", "hash", "salt")
         val category = Category(1, "Gehalt", BudgetItemType.INCOME, 5)
-        val budgetItem = BudgetItem(
-            id = 3,
-            name = "Miete",
-            amount = BigDecimal("1200"),
-            type = BudgetItemType.EXPENSE,
-            frequency = Frequency.MONTHLY,
-            planned = true,
-            categoryCorrection = false,
-            startDate = LocalDate.of(2025, 1, 1),
-            endDate = null,
-            category = category,
-            person = person,
-        )
-        val suspension = BudgetItemSuspension(
-            id = 4,
-            budgetItem = budgetItem,
-            startDate = LocalDate.of(2025, 2, 1),
-            endDate = null,
-        )
-        val account = SavingsAccount(
-            id = 5,
-            name = "Ruecklage",
-            owner = person,
-            startDate = LocalDate.of(2025, 1, 1),
-            endDate = null,
-        )
-        val balance = SavingsAccountBalance(
-            id = 6,
-            savingsAccount = account,
-            balanceDate = LocalDate.of(2025, 1, 1),
-            balanceAmount = BigDecimal("500"),
-        )
+        val budgetItem =
+            BudgetItem(
+                id = 3,
+                name = "Miete",
+                amount = BigDecimal("1200"),
+                type = BudgetItemType.EXPENSE,
+                frequency = Frequency.MONTHLY,
+                planned = true,
+                categoryCorrection = false,
+                startDate = LocalDate.of(2025, 1, 1),
+                endDate = null,
+                category = category,
+                person = person,
+            )
+        val suspension =
+            BudgetItemSuspension(
+                id = 4,
+                budgetItem = budgetItem,
+                startDate = LocalDate.of(2025, 2, 1),
+                endDate = null,
+            )
+        val account =
+            SavingsAccount(
+                id = 5,
+                name = "Ruecklage",
+                owner = person,
+                startDate = LocalDate.of(2025, 1, 1),
+                endDate = null,
+            )
+        val balance =
+            SavingsAccountBalance(
+                id = 6,
+                savingsAccount = account,
+                balanceDate = LocalDate.of(2025, 1, 1),
+                balanceAmount = BigDecimal("500"),
+            )
 
         `when`(personRepository.findAll()).thenReturn(listOf(person))
         `when`(categoryRepository.findAll()).thenReturn(listOf(category))
@@ -127,73 +130,80 @@ class DataTransferServiceTest {
 
     @Test
     fun `import should overwrite data and connect relations`() {
-        val payload = DataExportPayload(
-            persons = listOf(
-                PersonExport(id = 10, name = "Alex", username = "alex"),
-            ),
-            categories = listOf(
-                CategoryExport(id = 20, name = "Gehalt", type = BudgetItemType.INCOME, rank = 1),
-            ),
-            budgetItems = listOf(
-                BudgetItemExport(
-                    id = 30,
-                    name = "Miete",
-                    amount = BigDecimal("800"),
-                    type = BudgetItemType.EXPENSE,
-                    frequency = Frequency.MONTHLY,
-                    planned = true,
-                    categoryCorrection = false,
-                    startDate = LocalDate.of(2025, 1, 1),
-                    endDate = null,
-                    dueDate = null,
-                    categoryId = 20,
-                    personId = 10,
-                    previousBudgetItemId = null,
-                    rootBudgetItemId = 30,
-                ),
-                BudgetItemExport(
-                    id = 31,
-                    name = "Miete neu",
-                    amount = BigDecimal("900"),
-                    type = BudgetItemType.EXPENSE,
-                    frequency = Frequency.MONTHLY,
-                    planned = true,
-                    categoryCorrection = false,
-                    startDate = LocalDate.of(2025, 2, 1),
-                    endDate = null,
-                    dueDate = null,
-                    categoryId = 20,
-                    personId = 10,
-                    previousBudgetItemId = 30,
-                    rootBudgetItemId = 30,
-                ),
-            ),
-            budgetItemSuspensions = listOf(
-                BudgetItemSuspensionExport(
-                    id = 40,
-                    budgetItemId = 31,
-                    startDate = LocalDate.of(2025, 3, 1),
-                    endDate = null,
-                ),
-            ),
-            savingsAccounts = listOf(
-                SavingsAccountExport(
-                    id = 50,
-                    name = "Ruecklage",
-                    ownerPersonId = 10,
-                    startDate = LocalDate.of(2025, 1, 1),
-                    endDate = null,
-                ),
-            ),
-            savingsAccountBalances = listOf(
-                SavingsAccountBalanceExport(
-                    id = 60,
-                    savingsAccountId = 50,
-                    balanceDate = LocalDate.of(2025, 1, 5),
-                    balanceAmount = BigDecimal("500"),
-                ),
-            ),
-        )
+        val payload =
+            DataExportPayload(
+                persons =
+                    listOf(
+                        PersonExport(id = 10, name = "Alex", username = "alex"),
+                    ),
+                categories =
+                    listOf(
+                        CategoryExport(id = 20, name = "Gehalt", type = BudgetItemType.INCOME, rank = 1),
+                    ),
+                budgetItems =
+                    listOf(
+                        BudgetItemExport(
+                            id = 30,
+                            name = "Miete",
+                            amount = BigDecimal("800"),
+                            type = BudgetItemType.EXPENSE,
+                            frequency = Frequency.MONTHLY,
+                            planned = true,
+                            categoryCorrection = false,
+                            startDate = LocalDate.of(2025, 1, 1),
+                            endDate = null,
+                            dueDate = null,
+                            categoryId = 20,
+                            personId = 10,
+                            previousBudgetItemId = null,
+                            rootBudgetItemId = 30,
+                        ),
+                        BudgetItemExport(
+                            id = 31,
+                            name = "Miete neu",
+                            amount = BigDecimal("900"),
+                            type = BudgetItemType.EXPENSE,
+                            frequency = Frequency.MONTHLY,
+                            planned = true,
+                            categoryCorrection = false,
+                            startDate = LocalDate.of(2025, 2, 1),
+                            endDate = null,
+                            dueDate = null,
+                            categoryId = 20,
+                            personId = 10,
+                            previousBudgetItemId = 30,
+                            rootBudgetItemId = 30,
+                        ),
+                    ),
+                budgetItemSuspensions =
+                    listOf(
+                        BudgetItemSuspensionExport(
+                            id = 40,
+                            budgetItemId = 31,
+                            startDate = LocalDate.of(2025, 3, 1),
+                            endDate = null,
+                        ),
+                    ),
+                savingsAccounts =
+                    listOf(
+                        SavingsAccountExport(
+                            id = 50,
+                            name = "Ruecklage",
+                            ownerPersonId = 10,
+                            startDate = LocalDate.of(2025, 1, 1),
+                            endDate = null,
+                        ),
+                    ),
+                savingsAccountBalances =
+                    listOf(
+                        SavingsAccountBalanceExport(
+                            id = 60,
+                            savingsAccountId = 50,
+                            balanceDate = LocalDate.of(2025, 1, 5),
+                            balanceAmount = BigDecimal("500"),
+                        ),
+                    ),
+            )
 
         `when`(personRepository.save(any(Person::class.java))).thenAnswer { it.arguments[0] as Person }
         `when`(categoryRepository.save(any(Category::class.java))).thenAnswer { it.arguments[0] as Category }
@@ -224,31 +234,33 @@ class DataTransferServiceTest {
 
     @Test
     fun `import should reject invalid references`() {
-        val payload = DataExportPayload(
-            persons = listOf(PersonExport(id = 10, name = "Alex", username = "alex")),
-            categories = emptyList(),
-            budgetItems = listOf(
-                BudgetItemExport(
-                    id = 30,
-                    name = "Miete",
-                    amount = BigDecimal("800"),
-                    type = BudgetItemType.EXPENSE,
-                    frequency = Frequency.MONTHLY,
-                    planned = true,
-                    categoryCorrection = false,
-                    startDate = LocalDate.of(2025, 1, 1),
-                    endDate = null,
-                    dueDate = null,
-                    categoryId = 99,
-                    personId = 10,
-                    previousBudgetItemId = null,
-                    rootBudgetItemId = null,
-                ),
-            ),
-            budgetItemSuspensions = emptyList(),
-            savingsAccounts = emptyList(),
-            savingsAccountBalances = emptyList(),
-        )
+        val payload =
+            DataExportPayload(
+                persons = listOf(PersonExport(id = 10, name = "Alex", username = "alex")),
+                categories = emptyList(),
+                budgetItems =
+                    listOf(
+                        BudgetItemExport(
+                            id = 30,
+                            name = "Miete",
+                            amount = BigDecimal("800"),
+                            type = BudgetItemType.EXPENSE,
+                            frequency = Frequency.MONTHLY,
+                            planned = true,
+                            categoryCorrection = false,
+                            startDate = LocalDate.of(2025, 1, 1),
+                            endDate = null,
+                            dueDate = null,
+                            categoryId = 99,
+                            personId = 10,
+                            previousBudgetItemId = null,
+                            rootBudgetItemId = null,
+                        ),
+                    ),
+                budgetItemSuspensions = emptyList(),
+                savingsAccounts = emptyList(),
+                savingsAccountBalances = emptyList(),
+            )
 
         assertThrows(BadRequestException::class.java) {
             dataTransferService.importData(payload)

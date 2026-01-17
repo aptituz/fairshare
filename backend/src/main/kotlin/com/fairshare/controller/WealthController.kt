@@ -15,16 +15,16 @@ import com.fairshare.service.SavingsAccountBalanceService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
-import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
-import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.bind.annotation.ResponseStatus
-import org.springframework.http.HttpStatus
+import org.springframework.web.bind.annotation.RestController
 import java.time.Year
 import java.time.YearMonth
 
@@ -61,16 +61,14 @@ class WealthController(
 
     @GetMapping("/balances")
     @Operation(summary = "List recorded savings account balances")
-    fun balances(): List<SavingsAccountBalanceResponse> =
-        savingsAccountBalanceService.listBalances()
+    fun balances(): List<SavingsAccountBalanceResponse> = savingsAccountBalanceService.listBalances()
 
     @GetMapping("/balances/monthly")
     @Operation(summary = "List savings account balances grouped by month for a year")
     fun balancesByMonth(
         @Parameter(description = "Year (YYYY)")
         @RequestParam year: String,
-    ): List<SavingsAccountBalanceMonthResponse> =
-        savingsAccountBalanceService.monthlyBalances(parseYear(year))
+    ): List<SavingsAccountBalanceMonthResponse> = savingsAccountBalanceService.monthlyBalances(parseYear(year))
 
     @DeleteMapping("/balances/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

@@ -21,8 +21,7 @@ class SavingsAccountService(
     private val savingsAccountRepository: SavingsAccountRepository,
     private val personRepository: PersonRepository,
 ) {
-    fun list(): List<SavingsAccountResponse> =
-        savingsAccountRepository.findAll().map { it.toResponse() }
+    fun list(): List<SavingsAccountResponse> = savingsAccountRepository.findAll().map { it.toResponse() }
 
     fun create(request: CreateSavingsAccountRequest): SavingsAccountResponse {
         val name = request.name.trim()

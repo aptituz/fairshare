@@ -54,8 +54,9 @@ class SavingsAccountBalanceService(
             throw NotFoundException("One or more savings accounts not found")
         }
         return request.balances.map { input ->
-            val account = accounts[input.savingsAccountId]
-                ?: throw NotFoundException("Savings account ${input.savingsAccountId} not found")
+            val account =
+                accounts[input.savingsAccountId]
+                    ?: throw NotFoundException("Savings account ${input.savingsAccountId} not found")
             val saved = saveBalance(account, request.balanceDate, input.balanceAmount)
             saved.toResponse()
         }
@@ -139,8 +140,7 @@ class SavingsAccountBalanceService(
         }
     }
 
-    private fun yearRange(year: Int): Pair<YearMonth, YearMonth> =
-        YearMonth.of(year, 1) to YearMonth.of(year, 12)
+    private fun yearRange(year: Int): Pair<YearMonth, YearMonth> = YearMonth.of(year, 1) to YearMonth.of(year, 12)
 
     private fun buildSummaryContext(
         from: YearMonth,
@@ -174,9 +174,7 @@ class SavingsAccountBalanceService(
         return SummaryContext(accountIds, balancesByAccount, months, householdBalances)
     }
 
-    private fun buildMonthlySummaries(
-        context: SummaryContext,
-    ): List<SavingsAccountBalanceSummaryResponse> {
+    private fun buildMonthlySummaries(context: SummaryContext): List<SavingsAccountBalanceSummaryResponse> {
         val indices = context.accountIds.associateWith { 0 }.toMutableMap()
         val currentAmounts = mutableMapOf<Long, BigDecimal>()
         context.accountIds.forEach { accountId ->
@@ -242,8 +240,7 @@ class SavingsAccountBalanceService(
     private fun activeAccountsForMonth(
         monthStart: LocalDate,
         monthEnd: LocalDate,
-    ): Set<Long> =
-        savingsAccountRepository.findActiveIdsForMonth(monthStart, monthEnd).toSet()
+    ): Set<Long> = savingsAccountRepository.findActiveIdsForMonth(monthStart, monthEnd).toSet()
 
     private fun sumActiveBalances(
         currentAmounts: Map<Long, BigDecimal>,

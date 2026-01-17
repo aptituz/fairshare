@@ -24,7 +24,8 @@ class JwtService(
     fun generateToken(username: String): String {
         val now = Instant.now()
         val expiry = now.plus(expirationMinutes, ChronoUnit.MINUTES)
-        return Jwts.builder()
+        return Jwts
+            .builder()
             .subject(username)
             .issuedAt(Date.from(now))
             .expiration(Date.from(expiry))
@@ -34,7 +35,8 @@ class JwtService(
 
     fun parseUsername(token: String): String? =
         try {
-            Jwts.parser()
+            Jwts
+                .parser()
                 .verifyWith(key)
                 .build()
                 .parseSignedClaims(token)

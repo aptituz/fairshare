@@ -7,11 +7,11 @@ package com.fairshare.security
 
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.security.config.Customizer
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
-import org.springframework.security.config.Customizer
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter
 
 @Configuration
@@ -30,16 +30,16 @@ class SecurityConfig(
                 it.permissionsPolicy { policy ->
                     policy.policy("geolocation=(), microphone=(), camera=(), payment=(), usb=()")
                 }
-            }
-            .authorizeHttpRequests {
-                it.requestMatchers(
-                    "/api/auth/**",
-                    "/v3/api-docs/**",
-                    "/swagger-ui/**",
-                ).permitAll()
-                    .anyRequest().authenticated()
-            }
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter::class.java)
+            }.authorizeHttpRequests {
+                it
+                    .requestMatchers(
+                        "/api/auth/**",
+                        "/v3/api-docs/**",
+                        "/swagger-ui/**",
+                    ).permitAll()
+                    .anyRequest()
+                    .authenticated()
+            }.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter::class.java)
         return http.build()
     }
 }

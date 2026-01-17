@@ -24,7 +24,6 @@ import java.time.YearMonth
 
 @ExtendWith(MockitoExtension::class)
 class SavingsAccountBalanceServiceTest {
-
     @Mock
     lateinit var savingsAccountRepository: SavingsAccountRepository
 
@@ -40,12 +39,13 @@ class SavingsAccountBalanceServiceTest {
     @Test
     fun `monthlySummary should include expected balance based on household budget balances`() {
         val accountA = SavingsAccount(id = 1, name = "A")
-        val accountB = SavingsAccount(
-            id = 2,
-            name = "B",
-            startDate = LocalDate.of(2025, 2, 1),
-            endDate = LocalDate.of(2025, 2, 28)
-        )
+        val accountB =
+            SavingsAccount(
+                id = 2,
+                name = "B",
+                startDate = LocalDate.of(2025, 2, 1),
+                endDate = LocalDate.of(2025, 2, 28),
+            )
         val from = YearMonth.of(2025, 1)
         val to = YearMonth.of(2025, 3)
 
@@ -200,7 +200,8 @@ class SavingsAccountBalanceServiceTest {
                 LocalDate.of(2025, 12, 31),
             ),
         ).thenReturn(
-            balances.filter { it.balanceDate.year == 2025 }
+            balances
+                .filter { it.balanceDate.year == 2025 }
                 .sortedByDescending { it.balanceDate },
         )
 

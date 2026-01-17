@@ -23,7 +23,6 @@ import org.mockito.junit.jupiter.MockitoExtension
 
 @ExtendWith(MockitoExtension::class)
 class PersonServiceTest {
-
     @Mock
     lateinit var personRepository: PersonRepository
 
@@ -36,10 +35,11 @@ class PersonServiceTest {
     @Test
     fun `list should return all persons`() {
         // given
-        val persons = listOf(
-            Person(1, "Person 1", "person1"),
-            Person(2, "Person 2", "person2")
-        )
+        val persons =
+            listOf(
+                Person(1, "Person 1", "person1"),
+                Person(2, "Person 2", "person2"),
+            )
         `when`(personRepository.findAllByOrderByIdAsc()).thenReturn(persons)
 
         // when

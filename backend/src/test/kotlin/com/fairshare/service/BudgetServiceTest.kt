@@ -20,8 +20,8 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.ArgumentMatchers
 import org.mockito.InjectMocks
 import org.mockito.Mock
-import org.mockito.Mockito.`when`
 import org.mockito.Mockito.doAnswer
+import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -29,7 +29,6 @@ import java.time.YearMonth
 
 @ExtendWith(MockitoExtension::class)
 class BudgetServiceTest {
-
     @Mock
     lateinit var budgetItemRepository: BudgetItemRepository
 
@@ -51,31 +50,51 @@ class BudgetServiceTest {
         val month = YearMonth.of(2025, 1)
         val monthStart = month.atDay(1)
         val monthEnd = month.atEndOfMonth()
-        val incomeItems = listOf(BudgetItem(id = 1, name = "Salary", type = BudgetItemType.INCOME, amount = BigDecimal.TEN, category = Category(1, "cat", BudgetItemType.INCOME, 1), startDate = LocalDate.now()))
-        val expenseItems = listOf(BudgetItem(id = 2, name = "Rent", type = BudgetItemType.EXPENSE, amount = BigDecimal.ONE, category = Category(2, "cat", BudgetItemType.EXPENSE, 2), startDate = LocalDate.now()))
+        val incomeItems =
+            listOf(
+                BudgetItem(
+                    id = 1,
+                    name = "Salary",
+                    type = BudgetItemType.INCOME,
+                    amount = BigDecimal.TEN,
+                    category = Category(1, "cat", BudgetItemType.INCOME, 1),
+                    startDate = LocalDate.now(),
+                ),
+            )
+        val expenseItems =
+            listOf(
+                BudgetItem(
+                    id = 2,
+                    name = "Rent",
+                    type = BudgetItemType.EXPENSE,
+                    amount = BigDecimal.ONE,
+                    category = Category(2, "cat", BudgetItemType.EXPENSE, 2),
+                    startDate = LocalDate.now(),
+                ),
+            )
         val persons = listOf(Person(1, "Person 1", "person1"))
-        val expectedResponse = MonthlySummaryResponse(
-            totalHouseholdIncome = BigDecimal.TEN,
-            totalHouseholdIncomeRecurring = BigDecimal.TEN,
-            totalHouseholdExpenditure = BigDecimal.ONE,
-            totalHouseholdDueExpenses = BigDecimal.ZERO,
-            householdBudgetBalance = BigDecimal.TEN.subtract(BigDecimal.ONE),
-            sharedHouseholdBudgetBalanceWithoutOneTimeIncome = BigDecimal.ZERO,
-            expensesByCategory = emptyList(),
-            incomeByCategory = emptyList(),
-            incomeByBudgetItem = emptyList(),
-            incomeByPerson = emptyList(),
-            expensesByPerson = emptyList(),
-            expensesByBudgetItem = emptyList(),
-            sharedHouseholdIncomeTotal = BigDecimal.ZERO,
-            sharedHouseholdExpenditureTotal = BigDecimal.ZERO,
-            sharedHouseholdDueExpensesTotal = BigDecimal.ZERO,
-            personalHouseholdDueExpensesTotal = BigDecimal.ZERO,
-            sharedHouseholdReserveShare = BigDecimal.ZERO,
-            budgetPerPerson = BigDecimal.ZERO,
-            costSplit = emptyList()
-        )
-
+        val expectedResponse =
+            MonthlySummaryResponse(
+                totalHouseholdIncome = BigDecimal.TEN,
+                totalHouseholdIncomeRecurring = BigDecimal.TEN,
+                totalHouseholdExpenditure = BigDecimal.ONE,
+                totalHouseholdDueExpenses = BigDecimal.ZERO,
+                householdBudgetBalance = BigDecimal.TEN.subtract(BigDecimal.ONE),
+                sharedHouseholdBudgetBalanceWithoutOneTimeIncome = BigDecimal.ZERO,
+                expensesByCategory = emptyList(),
+                incomeByCategory = emptyList(),
+                incomeByBudgetItem = emptyList(),
+                incomeByPerson = emptyList(),
+                expensesByPerson = emptyList(),
+                expensesByBudgetItem = emptyList(),
+                sharedHouseholdIncomeTotal = BigDecimal.ZERO,
+                sharedHouseholdExpenditureTotal = BigDecimal.ZERO,
+                sharedHouseholdDueExpensesTotal = BigDecimal.ZERO,
+                personalHouseholdDueExpensesTotal = BigDecimal.ZERO,
+                sharedHouseholdReserveShare = BigDecimal.ZERO,
+                budgetPerPerson = BigDecimal.ZERO,
+                costSplit = emptyList(),
+            )
 
         `when`(budgetItemRepository.findEffectiveForMonth(BudgetItemType.INCOME, monthStart, monthEnd)).thenReturn(incomeItems)
         `when`(budgetItemRepository.findEffectiveForMonth(BudgetItemType.EXPENSE, monthStart, monthEnd)).thenReturn(expenseItems)

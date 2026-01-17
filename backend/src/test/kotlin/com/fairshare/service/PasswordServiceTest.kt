@@ -47,7 +47,10 @@ class PasswordServiceTest {
         assertFalse(result.matches)
     }
 
-    private fun legacyHash(password: String, salt: String): String {
+    private fun legacyHash(
+        password: String,
+        salt: String,
+    ): String {
         val digest = MessageDigest.getInstance("SHA-256")
         digest.update(Base64.getDecoder().decode(salt))
         val hashed = digest.digest(password.toByteArray(Charsets.UTF_8))

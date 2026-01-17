@@ -41,8 +41,6 @@ dependencies {
     testImplementation("org.springframework.security:spring-security-test")
 }
 
-
-
 tasks.withType<JavaCompile> {
     options.release.set(18)
 }

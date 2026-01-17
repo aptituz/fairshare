@@ -5,10 +5,10 @@
 
 package com.fairshare.service
 
-import com.fairshare.dto.BudgetItemOverrideRequest
-import com.fairshare.dto.BudgetItemHistoryEntryResponse
-import com.fairshare.dto.BudgetItemResponse
 import com.fairshare.dto.BudgetItemDueDatesResponse
+import com.fairshare.dto.BudgetItemHistoryEntryResponse
+import com.fairshare.dto.BudgetItemOverrideRequest
+import com.fairshare.dto.BudgetItemResponse
 import com.fairshare.dto.BudgetItemValueChangeRequest
 import com.fairshare.dto.CategoryCorrectionRequest
 import com.fairshare.dto.CreateBudgetItemRequest
@@ -584,8 +584,9 @@ class BudgetItemService(
                 resumeStart,
                 resumeEnd,
             )
-        val suspension = suspensions.firstOrNull()
-            ?: throw BadRequestException("No suspension found for the selected month")
+        val suspension =
+            suspensions.firstOrNull()
+                ?: throw BadRequestException("No suspension found for the selected month")
         if (resumeStart.isEqual(suspension.startDate)) {
             budgetItemSuspensionRepository.delete(suspension)
             return budgetItem.toResponse()

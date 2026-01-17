@@ -20,9 +20,10 @@ import org.springframework.stereotype.Service
 @Service
 class PersonService(
     private val personRepository: PersonRepository,
-    private val budgetItemRepository: BudgetItemRepository
+    private val budgetItemRepository: BudgetItemRepository,
 ) {
     private val log = org.slf4j.LoggerFactory.getLogger(PersonService::class.java)
+
     fun list(): List<PersonResponse> = personRepository.findAllByOrderByIdAsc().map { it.toResponse() }
 
     fun create(request: CreatePersonRequest): PersonResponse {

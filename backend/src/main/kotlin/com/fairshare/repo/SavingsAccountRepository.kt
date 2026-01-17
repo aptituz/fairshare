@@ -12,7 +12,6 @@ import org.springframework.data.repository.query.Param
 import java.time.LocalDate
 
 interface SavingsAccountRepository : JpaRepository<SavingsAccount, Long> {
-
     @Query(
         """
         select a.id

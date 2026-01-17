@@ -26,7 +26,6 @@ import org.mockito.junit.jupiter.MockitoExtension
 
 @ExtendWith(MockitoExtension::class)
 class CategoryServiceTest {
-
     @Mock
     lateinit var categoryRepository: CategoryRepository
 
@@ -39,10 +38,11 @@ class CategoryServiceTest {
     @Test
     fun `list should return all categories`() {
         // given
-        val categories = listOf(
-            Category(1, "Category 1", BudgetItemType.INCOME, 1),
-            Category(2, "Category 2", BudgetItemType.EXPENSE, 2)
-        )
+        val categories =
+            listOf(
+                Category(1, "Category 1", BudgetItemType.INCOME, 1),
+                Category(2, "Category 2", BudgetItemType.EXPENSE, 2),
+            )
         `when`(categoryRepository.findAll()).thenReturn(categories)
 
         // when

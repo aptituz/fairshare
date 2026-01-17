@@ -11,8 +11,9 @@ import com.fairshare.model.SavingsAccountBalance
 fun SavingsAccountBalance.toResponse(): SavingsAccountBalanceResponse =
     SavingsAccountBalanceResponse(
         id = id,
-        savingsAccountId = savingsAccount.id
-            ?: throw IllegalStateException("Savings account must be persisted before mapping"),
+        savingsAccountId =
+            savingsAccount.id
+                ?: throw IllegalStateException("Savings account must be persisted before mapping"),
         balanceDate = balanceDate,
         balanceAmount = balanceAmount,
     )

@@ -12,7 +12,6 @@ import org.springframework.data.repository.query.Param
 import java.time.LocalDate
 
 interface SavingsAccountBalanceRepository : JpaRepository<SavingsAccountBalance, Long> {
-
     fun findBySavingsAccountIdAndBalanceDate(
         savingsAccountId: Long,
         balanceDate: LocalDate,

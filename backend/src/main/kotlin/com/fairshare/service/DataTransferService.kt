@@ -53,46 +53,52 @@ class DataTransferService(
         categoryRepository.deleteAllInBatch()
         personRepository.deleteAllInBatch()
 
-        val personsById = payload.persons.associate { export ->
-            export.id to personRepository.save(
-                Person(
-                    name = export.name,
-                    username = export.username,
-                    passwordHash = export.passwordHash,
-                    passwordSalt = export.passwordSalt,
-                )
-            )
-        }
+        val personsById =
+            payload.persons.associate { export ->
+                export.id to
+                    personRepository.save(
+                        Person(
+                            name = export.name,
+                            username = export.username,
+                            passwordHash = export.passwordHash,
+                            passwordSalt = export.passwordSalt,
+                        ),
+                    )
+            }
 
-        val categoriesById = payload.categories.associate { export ->
-            export.id to categoryRepository.save(
-                Category(
-                    name = export.name,
-                    type = export.type,
-                    rank = export.rank,
-                )
-            )
-        }
+        val categoriesById =
+            payload.categories.associate { export ->
+                export.id to
+                    categoryRepository.save(
+                        Category(
+                            name = export.name,
+                            type = export.type,
+                            rank = export.rank,
+                        ),
+                    )
+            }
 
-        val budgetItemsById = payload.budgetItems.associate { export ->
-            val category = export.categoryId?.let { categoriesById[it] }
-            val person = export.personId?.let { personsById[it] }
-            export.id to budgetItemRepository.save(
-                BudgetItem(
-                    name = export.name,
-                    amount = export.amount,
-                    type = export.type,
-                    frequency = export.frequency,
-                    planned = export.planned,
-                    categoryCorrection = export.categoryCorrection,
-                    startDate = export.startDate,
-                    endDate = export.endDate,
-                    dueDate = export.dueDate,
-                    category = category,
-                    person = person,
-                )
-            )
-        }
+        val budgetItemsById =
+            payload.budgetItems.associate { export ->
+                val category = export.categoryId?.let { categoriesById[it] }
+                val person = export.personId?.let { personsById[it] }
+                export.id to
+                    budgetItemRepository.save(
+                        BudgetItem(
+                            name = export.name,
+                            amount = export.amount,
+                            type = export.type,
+                            frequency = export.frequency,
+                            planned = export.planned,
+                            categoryCorrection = export.categoryCorrection,
+                            startDate = export.startDate,
+                            endDate = export.endDate,
+                            dueDate = export.dueDate,
+                            category = category,
+                            person = person,
+                        ),
+                    )
+            }
 
         payload.budgetItems.forEach { export ->
             val item = budgetItemsById.getValue(export.id)
@@ -112,21 +118,23 @@ class DataTransferService(
                     budgetItem = budgetItem,
                     startDate = export.startDate,
                     endDate = export.endDate,
-                )
+                ),
             )
         }
 
-        val accountsById = payload.savingsAccounts.associate { export ->
-            val owner = export.ownerPersonId?.let { personsById[it] }
-            export.id to savingsAccountRepository.save(
-                SavingsAccount(
-                    name = export.name,
-                    owner = owner,
-                    startDate = export.startDate,
-                    endDate = export.endDate,
-                )
-            )
-        }
+        val accountsById =
+            payload.savingsAccounts.associate { export ->
+                val owner = export.ownerPersonId?.let { personsById[it] }
+                export.id to
+                    savingsAccountRepository.save(
+                        SavingsAccount(
+                            name = export.name,
+                            owner = owner,
+                            startDate = export.startDate,
+                            endDate = export.endDate,
+                        ),
+                    )
+            }
 
         payload.savingsAccountBalances.forEach { export ->
             val account = accountsById.getValue(export.savingsAccountId)
@@ -135,7 +143,7 @@ class DataTransferService(
                     savingsAccount = account,
                     balanceDate = export.balanceDate,
                     balanceAmount = export.balanceAmount,
-                )
+                ),
             )
         }
     }
@@ -187,8 +195,16 @@ class DataTransferService(
         }
     }
 
-    private fun validateUniqueIds(ids: List<Long>, label: String) {
-        val duplicates = ids.groupingBy { it }.eachCount().filterValues { it > 1 }.keys
+    private fun validateUniqueIds(
+        ids: List<Long>,
+        label: String,
+    ) {
+        val duplicates =
+            ids
+                .groupingBy { it }
+                .eachCount()
+                .filterValues { it > 1 }
+                .keys
         if (duplicates.isNotEmpty()) {
             throw BadRequestException("Duplicate ids in $label: ${duplicates.sorted().joinToString(", ")}.")
         }

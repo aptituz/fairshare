@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test
 import java.math.BigDecimal
 
 class CostSplitCalculatorTest {
-
     private val costSplitCalculator = CostSplitCalculator()
 
     @Test
@@ -22,34 +21,39 @@ class CostSplitCalculatorTest {
         val person2 = Person(id = 2L, name = "Bob", username = "bob")
         val persons = listOf(person1, person2)
 
-        val personalIncomeTotals = mapOf<Long?, BigDecimal>(
-            1L to BigDecimal("2000.00"), // Alice's income
-            2L to BigDecimal("3000.00")  // Bob's income
-        )
-        val personalExpenseTotals = mapOf<Long?, BigDecimal>(
-            1L to BigDecimal("500.00"), // Alice's expenses
-            2L to BigDecimal("800.00")  // Bob's expenses
-        )
+        val personalIncomeTotals =
+            mapOf<Long?, BigDecimal>(
+                1L to BigDecimal("2000.00"), // Alice's income
+                2L to BigDecimal("3000.00"), // Bob's income
+            )
+        val personalExpenseTotals =
+            mapOf<Long?, BigDecimal>(
+                1L to BigDecimal("500.00"), // Alice's expenses
+                2L to BigDecimal("800.00"), // Bob's expenses
+            )
         val sharedHouseholdIncomeTotal = BigDecimal("1000.00")
         val sharedHouseholdExpenditureTotal = BigDecimal("1200.00")
-        val personalReserveTotals = mapOf<Long?, BigDecimal>(
-            1L to BigDecimal("120.00"),
-            2L to BigDecimal("180.00")
-        )
+        val personalReserveTotals =
+            mapOf<Long?, BigDecimal>(
+                1L to BigDecimal("120.00"),
+                2L to BigDecimal("180.00"),
+            )
         // Net result of shared items is 1000 - 1200 = -200
-        val sharedHouseholdBudgetBalanceWithoutOneTimeIncome = sharedHouseholdIncomeTotal
-            .subtract(sharedHouseholdExpenditureTotal)
+        val sharedHouseholdBudgetBalanceWithoutOneTimeIncome =
+            sharedHouseholdIncomeTotal
+                .subtract(sharedHouseholdExpenditureTotal)
 
         // ACT
-        val result = costSplitCalculator.calculate(
-            persons = persons,
-            personalIncomeTotals = personalIncomeTotals,
-            personalExpenseTotals = personalExpenseTotals,
-            personalReserveTotals = personalReserveTotals,
-            sharedHouseholdIncomeTotal = sharedHouseholdIncomeTotal,
-            sharedHouseholdExpenditureTotal = sharedHouseholdExpenditureTotal,
-            sharedHouseholdBudgetBalanceWithoutOneTimeIncome = sharedHouseholdBudgetBalanceWithoutOneTimeIncome
-        )
+        val result =
+            costSplitCalculator.calculate(
+                persons = persons,
+                personalIncomeTotals = personalIncomeTotals,
+                personalExpenseTotals = personalExpenseTotals,
+                personalReserveTotals = personalReserveTotals,
+                sharedHouseholdIncomeTotal = sharedHouseholdIncomeTotal,
+                sharedHouseholdExpenditureTotal = sharedHouseholdExpenditureTotal,
+                sharedHouseholdBudgetBalanceWithoutOneTimeIncome = sharedHouseholdBudgetBalanceWithoutOneTimeIncome,
+            )
 
         // ASSERT
         // 1. Overall Budget & Shared Totals
@@ -57,7 +61,6 @@ class CostSplitCalculatorTest {
         assertEquals(0, result.budgetPerPerson.compareTo(BigDecimal("-100.00")))
         assertEquals(0, result.sharedHouseholdIncomeTotal.compareTo(sharedHouseholdIncomeTotal))
         assertEquals(0, result.sharedHouseholdExpenditureTotal.compareTo(sharedHouseholdExpenditureTotal))
-
 
         // 2. Individual Splits (Alice and Bob)
         assertEquals(2, result.costSplit.size)

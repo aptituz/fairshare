@@ -37,10 +37,12 @@ class PasswordService(
         }
     }
 
-    private fun isBcryptHash(hash: String): Boolean =
-        hash.startsWith("\$2a\$") || hash.startsWith("\$2b\$") || hash.startsWith("\$2y\$")
+    private fun isBcryptHash(hash: String): Boolean = hash.startsWith("\$2a\$") || hash.startsWith("\$2b\$") || hash.startsWith("\$2y\$")
 
-    private fun hashLegacyPassword(password: String, salt: String): String {
+    private fun hashLegacyPassword(
+        password: String,
+        salt: String,
+    ): String {
         val digest = MessageDigest.getInstance("SHA-256")
         digest.update(Base64.getDecoder().decode(salt))
         val hashed = digest.digest(password.toByteArray(Charsets.UTF_8))

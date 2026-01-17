@@ -30,9 +30,10 @@ class MonthlySummaryCalculator(
         val dueExpenses = dueExpensesForMonth(expenseItems, month)
         val totalDueExpenses = dueExpenses.fold(BigDecimal.ZERO) { acc, item -> acc.add(item.amount) }
         val totalHouseholdIncome = sumMonthlyAmounts(incomeItems)
-        val totalHouseholdIncomeRecurring = incomeItems
-            .filter { !(it.frequency == Frequency.ONE_TIME && !it.planned) }
-            .let { sumMonthlyAmounts(it) }
+        val totalHouseholdIncomeRecurring =
+            incomeItems
+                .filter { !(it.frequency == Frequency.ONE_TIME && !it.planned) }
+                .let { sumMonthlyAmounts(it) }
         val totalHouseholdExpenditure = sumMonthlyAmounts(expenseItems).add(totalDueExpenses)
 
         val incomeByPerson =
@@ -82,8 +83,7 @@ class MonthlySummaryCalculator(
                             isDue = true,
                         )
                     }
-                )
-                .sortedBy { it.budgetItemName.lowercase() }
+            ).sortedBy { it.budgetItemName.lowercase() }
 
         val expensesByPerson =
             expenseItems
@@ -107,24 +107,29 @@ class MonthlySummaryCalculator(
                     )
                 }.sortedBy { it.categoryName.lowercase() }
 
-        val sharedHouseholdIncomeTotal = incomeByBudgetItem
-            .filter { it.personId == null }
-            .fold(BigDecimal.ZERO) { acc, item -> acc.add(item.monthlyAmount) }
-        val sharedHouseholdExpenditureTotal = expensesByBudgetItem
-            .filter { it.personId == null && !it.isDue }
-            .fold(BigDecimal.ZERO) { acc, item -> acc.add(item.monthlyAmount) }
-        val sharedHouseholdDueExpensesTotal = dueExpenses
-            .filter { it.person == null }
-            .fold(BigDecimal.ZERO) { acc, item -> acc.add(item.amount) }
-        val personalHouseholdDueExpensesTotal = dueExpenses
-            .filter { it.person != null }
-            .fold(BigDecimal.ZERO) { acc, item -> acc.add(item.amount) }
+        val sharedHouseholdIncomeTotal =
+            incomeByBudgetItem
+                .filter { it.personId == null }
+                .fold(BigDecimal.ZERO) { acc, item -> acc.add(item.monthlyAmount) }
+        val sharedHouseholdExpenditureTotal =
+            expensesByBudgetItem
+                .filter { it.personId == null && !it.isDue }
+                .fold(BigDecimal.ZERO) { acc, item -> acc.add(item.monthlyAmount) }
+        val sharedHouseholdDueExpensesTotal =
+            dueExpenses
+                .filter { it.person == null }
+                .fold(BigDecimal.ZERO) { acc, item -> acc.add(item.amount) }
+        val personalHouseholdDueExpensesTotal =
+            dueExpenses
+                .filter { it.person != null }
+                .fold(BigDecimal.ZERO) { acc, item -> acc.add(item.amount) }
         val reserveItems =
             expenseItems.filter { item ->
                 when (item.frequency) {
                     Frequency.QUARTERLY,
                     Frequency.HALF_YEARLY,
-                    Frequency.YEARLY -> true
+                    Frequency.YEARLY,
+                    -> true
                     else -> false
                 }
             }
@@ -150,18 +155,20 @@ class MonthlySummaryCalculator(
                 .groupBy { it.personId }
                 .mapValues { (_, items) -> items.fold(BigDecimal.ZERO) { acc, item -> acc.add(item.monthlyAmount) } }
 
-        val sharedHouseholdBudgetBalanceWithoutOneTimeIncome = totalHouseholdIncomeRecurring.subtract(
-            sharedHouseholdExpenditureTotal
-        )
-        val costSplitResult = costSplitCalculator.calculate(
-            persons = persons,
-            personalIncomeTotals = personalIncomeTotals,
-            personalExpenseTotals = personalExpenseTotals,
-            personalReserveTotals = personalReserveTotals,
-            sharedHouseholdIncomeTotal = sharedHouseholdIncomeTotal,
-            sharedHouseholdExpenditureTotal = sharedHouseholdExpenditureTotal,
-            sharedHouseholdBudgetBalanceWithoutOneTimeIncome = sharedHouseholdBudgetBalanceWithoutOneTimeIncome
-        )
+        val sharedHouseholdBudgetBalanceWithoutOneTimeIncome =
+            totalHouseholdIncomeRecurring.subtract(
+                sharedHouseholdExpenditureTotal,
+            )
+        val costSplitResult =
+            costSplitCalculator.calculate(
+                persons = persons,
+                personalIncomeTotals = personalIncomeTotals,
+                personalExpenseTotals = personalExpenseTotals,
+                personalReserveTotals = personalReserveTotals,
+                sharedHouseholdIncomeTotal = sharedHouseholdIncomeTotal,
+                sharedHouseholdExpenditureTotal = sharedHouseholdExpenditureTotal,
+                sharedHouseholdBudgetBalanceWithoutOneTimeIncome = sharedHouseholdBudgetBalanceWithoutOneTimeIncome,
+            )
 
         return MonthlySummaryResponse(
             totalHouseholdIncome = totalHouseholdIncome,

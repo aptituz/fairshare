@@ -96,8 +96,9 @@ class BudgetService(
             val adjustedIncomeItems = applySuspensionsForMonth(incomeItems, monthStart, monthEnd)
             val adjustedExpenseItems = applySuspensionsForMonth(expenseItems, monthStart, monthEnd)
             val totalIncome = sumMonthlyAmounts(adjustedIncomeItems)
-            val dueExpenseTotal = dueExpensesForMonth(adjustedExpenseItems, month)
-                .fold(BigDecimal.ZERO) { acc, item -> acc.add(item.amount) }
+            val dueExpenseTotal =
+                dueExpensesForMonth(adjustedExpenseItems, month)
+                    .fold(BigDecimal.ZERO) { acc, item -> acc.add(item.amount) }
             val totalExpense = sumMonthlyAmounts(adjustedExpenseItems).add(dueExpenseTotal)
             MonthlyTotalsResponse(
                 month = month.toString(),
@@ -130,8 +131,9 @@ class BudgetService(
                     monthEnd,
                 )
             val adjustedExpenseItems = applySuspensionsForMonth(expenseItems, monthStart, monthEnd)
-            val dueExpenseTotal = dueExpensesForMonth(adjustedExpenseItems, month)
-                .fold(BigDecimal.ZERO) { acc, item -> acc.add(item.amount) }
+            val dueExpenseTotal =
+                dueExpensesForMonth(adjustedExpenseItems, month)
+                    .fold(BigDecimal.ZERO) { acc, item -> acc.add(item.amount) }
             MonthlyExpenseTotalResponse(
                 month = month.toString(),
                 totalExpense = sumMonthlyAmounts(adjustedExpenseItems).add(dueExpenseTotal),

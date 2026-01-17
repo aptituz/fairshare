@@ -15,8 +15,8 @@ import com.fairshare.dto.UpdateBudgetItemRequest
 import com.fairshare.exception.BadRequestException
 import com.fairshare.exception.NotFoundException
 import com.fairshare.model.BudgetItem
-import com.fairshare.model.BudgetItemType
 import com.fairshare.model.BudgetItemSuspension
+import com.fairshare.model.BudgetItemType
 import com.fairshare.model.Category
 import com.fairshare.model.Frequency
 import com.fairshare.model.Person
@@ -28,9 +28,9 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.anyList
-import org.mockito.ArgumentCaptor
 import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.Mockito.never
@@ -42,7 +42,6 @@ import java.time.LocalDate
 
 @ExtendWith(MockitoExtension::class)
 class BudgetItemServiceTest {
-
     @Mock
     lateinit var budgetItemRepository: BudgetItemRepository
 
@@ -61,10 +60,25 @@ class BudgetItemServiceTest {
     @Test
     fun `list should return all budget items when no type is specified`() {
         // given
-        val budgetItems = listOf(
-            BudgetItem(id = 1, name = "Item 1", amount = BigDecimal.TEN, type = BudgetItemType.INCOME, category = Category(1, "cat", BudgetItemType.INCOME, 1), startDate = LocalDate.now()),
-            BudgetItem(id = 2, name = "Item 2", amount = BigDecimal.ONE, type = BudgetItemType.EXPENSE, category = Category(2, "cat", BudgetItemType.EXPENSE, 2), startDate = LocalDate.now())
-        )
+        val budgetItems =
+            listOf(
+                BudgetItem(
+                    id = 1,
+                    name = "Item 1",
+                    amount = BigDecimal.TEN,
+                    type = BudgetItemType.INCOME,
+                    category = Category(1, "cat", BudgetItemType.INCOME, 1),
+                    startDate = LocalDate.now(),
+                ),
+                BudgetItem(
+                    id = 2,
+                    name = "Item 2",
+                    amount = BigDecimal.ONE,
+                    type = BudgetItemType.EXPENSE,
+                    category = Category(2, "cat", BudgetItemType.EXPENSE, 2),
+                    startDate = LocalDate.now(),
+                ),
+            )
         `when`(budgetItemRepository.findAll()).thenReturn(budgetItems)
 
         // when
@@ -77,9 +91,17 @@ class BudgetItemServiceTest {
     @Test
     fun `list should return budget items of specified type`() {
         // given
-        val budgetItems = listOf(
-            BudgetItem(id = 1, name = "Item 1", amount = BigDecimal.TEN, type = BudgetItemType.INCOME, category = Category(1, "cat", BudgetItemType.INCOME, 1), startDate = LocalDate.now())
-        )
+        val budgetItems =
+            listOf(
+                BudgetItem(
+                    id = 1,
+                    name = "Item 1",
+                    amount = BigDecimal.TEN,
+                    type = BudgetItemType.INCOME,
+                    category = Category(1, "cat", BudgetItemType.INCOME, 1),
+                    startDate = LocalDate.now(),
+                ),
+            )
         `when`(budgetItemRepository.findByType(BudgetItemType.INCOME)).thenReturn(budgetItems)
 
         // when
@@ -144,13 +166,14 @@ class BudgetItemServiceTest {
         // given
         val category = Category(1, "Category", BudgetItemType.INCOME, 1)
         val person = Person(1, "Person", "person")
-        val request = CreateBudgetItemRequest(
-            name = "New Item",
-            amount = BigDecimal.TEN,
-            type = BudgetItemType.INCOME,
-            categoryId = 1,
-            personId = 1
-        )
+        val request =
+            CreateBudgetItemRequest(
+                name = "New Item",
+                amount = BigDecimal.TEN,
+                type = BudgetItemType.INCOME,
+                categoryId = 1,
+                personId = 1,
+            )
         `when`(categoryRepository.findById(1)).thenReturn(java.util.Optional.of(category))
         `when`(personRepository.findById(1)).thenReturn(java.util.Optional.of(person))
         `when`(budgetItemRepository.save(any(BudgetItem::class.java))).thenAnswer { it.arguments[0] as BudgetItem }
@@ -169,12 +192,13 @@ class BudgetItemServiceTest {
     @Test
     fun `create should throw an exception when category is not found`() {
         // given
-        val request = CreateBudgetItemRequest(
-            name = "New Item",
-            amount = BigDecimal.TEN,
-            type = BudgetItemType.INCOME,
-            categoryId = 1
-        )
+        val request =
+            CreateBudgetItemRequest(
+                name = "New Item",
+                amount = BigDecimal.TEN,
+                type = BudgetItemType.INCOME,
+                categoryId = 1,
+            )
         `when`(categoryRepository.findById(1)).thenReturn(java.util.Optional.empty())
 
         // when / then
@@ -186,13 +210,14 @@ class BudgetItemServiceTest {
     @Test
     fun `create should throw an exception when person is not found`() {
         // given
-        val request = CreateBudgetItemRequest(
-            name = "New Item",
-            amount = BigDecimal.TEN,
-            type = BudgetItemType.INCOME,
-            categoryId = null,
-            personId = 1
-        )
+        val request =
+            CreateBudgetItemRequest(
+                name = "New Item",
+                amount = BigDecimal.TEN,
+                type = BudgetItemType.INCOME,
+                categoryId = null,
+                personId = 1,
+            )
         `when`(personRepository.findById(1)).thenReturn(java.util.Optional.empty())
 
         // when / then
@@ -204,15 +229,17 @@ class BudgetItemServiceTest {
     @Test
     fun `update should save and return an updated budget item`() {
         // given
-        val budgetItem = BudgetItem(id = 1, name = "Old Item", amount = BigDecimal.ONE, type = BudgetItemType.INCOME, startDate = LocalDate.now())
+        val budgetItem =
+            BudgetItem(id = 1, name = "Old Item", amount = BigDecimal.ONE, type = BudgetItemType.INCOME, startDate = LocalDate.now())
         val category = Category(1, "Category", BudgetItemType.INCOME, 1)
         val person = Person(1, "Person", "person")
-        val request = UpdateBudgetItemRequest(
-            name = "Updated Item",
-            amount = BigDecimal.TEN,
-            categoryId = 1,
-            personId = 1
-        )
+        val request =
+            UpdateBudgetItemRequest(
+                name = "Updated Item",
+                amount = BigDecimal.TEN,
+                categoryId = 1,
+                personId = 1,
+            )
         `when`(budgetItemRepository.findById(1)).thenReturn(java.util.Optional.of(budgetItem))
         `when`(categoryRepository.findById(1)).thenReturn(java.util.Optional.of(category))
         `when`(personRepository.findById(1)).thenReturn(java.util.Optional.of(person))
@@ -231,7 +258,8 @@ class BudgetItemServiceTest {
     @Test
     fun `delete should remove a budget item`() {
         // given
-        val budgetItem = BudgetItem(id = 1, name = "Item", amount = BigDecimal.TEN, type = BudgetItemType.INCOME, startDate = LocalDate.now())
+        val budgetItem =
+            BudgetItem(id = 1, name = "Item", amount = BigDecimal.TEN, type = BudgetItemType.INCOME, startDate = LocalDate.now())
         `when`(budgetItemRepository.findById(1)).thenReturn(java.util.Optional.of(budgetItem))
 
         // when
@@ -244,7 +272,15 @@ class BudgetItemServiceTest {
     @Test
     fun `overrideForMonth should throw an exception when override month is outside the item range`() {
         // given
-        val budgetItem = BudgetItem(id = 1, name = "Item", amount = BigDecimal.TEN, type = BudgetItemType.INCOME, startDate = LocalDate.of(2025, 2, 1), endDate = LocalDate.of(2025, 3, 31))
+        val budgetItem =
+            BudgetItem(
+                id = 1,
+                name = "Item",
+                amount = BigDecimal.TEN,
+                type = BudgetItemType.INCOME,
+                startDate = LocalDate.of(2025, 2, 1),
+                endDate = LocalDate.of(2025, 3, 31),
+            )
         val request = BudgetItemOverrideRequest(month = "2025-01", amount = BigDecimal.ONE)
         `when`(budgetItemRepository.findById(1)).thenReturn(java.util.Optional.of(budgetItem))
 
@@ -257,7 +293,15 @@ class BudgetItemServiceTest {
     @Test
     fun `overrideForMonth should update a one-time item successfully`() {
         // given
-        val budgetItem = BudgetItem(id = 1, name = "Item", amount = BigDecimal.TEN, type = BudgetItemType.INCOME, frequency = com.fairshare.model.Frequency.ONE_TIME, startDate = LocalDate.of(2025, 1, 15))
+        val budgetItem =
+            BudgetItem(
+                id = 1,
+                name = "Item",
+                amount = BigDecimal.TEN,
+                type = BudgetItemType.INCOME,
+                frequency = com.fairshare.model.Frequency.ONE_TIME,
+                startDate = LocalDate.of(2025, 1, 15),
+            )
         val request = BudgetItemOverrideRequest(month = "2025-01", amount = BigDecimal.ONE)
         `when`(budgetItemRepository.findById(1)).thenReturn(java.util.Optional.of(budgetItem))
         `when`(budgetItemRepository.save(any(BudgetItem::class.java))).thenAnswer { it.arguments[0] as BudgetItem }
@@ -272,7 +316,15 @@ class BudgetItemServiceTest {
     @Test
     fun `overrideForMonth should split a recurring item`() {
         // given
-        val budgetItem = BudgetItem(id = 1, name = "Item", amount = BigDecimal.TEN, type = BudgetItemType.INCOME, startDate = LocalDate.of(2024, 1, 1), endDate = LocalDate.of(2025, 12, 31))
+        val budgetItem =
+            BudgetItem(
+                id = 1,
+                name = "Item",
+                amount = BigDecimal.TEN,
+                type = BudgetItemType.INCOME,
+                startDate = LocalDate.of(2024, 1, 1),
+                endDate = LocalDate.of(2025, 12, 31),
+            )
         val request = BudgetItemOverrideRequest(month = "2025-06", amount = BigDecimal.ONE)
         `when`(budgetItemRepository.findById(1)).thenReturn(java.util.Optional.of(budgetItem))
         `when`(budgetItemRepository.save(any(BudgetItem::class.java))).thenAnswer { it.arguments[0] as BudgetItem }
@@ -290,17 +342,42 @@ class BudgetItemServiceTest {
     fun `createCategoryCorrection should create a new correction`() {
         // given
         val category = Category(1, "Category", BudgetItemType.EXPENSE, 1)
-        val request = CategoryCorrectionRequest(
-            categoryId = 1,
-            month = "2025-01",
-            actualAmount = BigDecimal("150")
-        )
-        val plannedItems = listOf(
-            BudgetItem(id = 1, name = "Item 1", amount = BigDecimal("100"), type = BudgetItemType.EXPENSE, category = category, startDate = LocalDate.of(2025,1,1))
-        )
+        val request =
+            CategoryCorrectionRequest(
+                categoryId = 1,
+                month = "2025-01",
+                actualAmount = BigDecimal("150"),
+            )
+        val plannedItems =
+            listOf(
+                BudgetItem(
+                    id = 1,
+                    name = "Item 1",
+                    amount = BigDecimal("100"),
+                    type = BudgetItemType.EXPENSE,
+                    category = category,
+                    startDate = LocalDate.of(2025, 1, 1),
+                ),
+            )
         `when`(categoryRepository.findById(1)).thenReturn(java.util.Optional.of(category))
-        `when`(budgetItemRepository.findPlannedForCategoryAndMonth(BudgetItemType.EXPENSE, 1, null, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31))).thenReturn(plannedItems)
-        `when`(budgetItemRepository.findUnplannedForCategoryAndMonth(BudgetItemType.EXPENSE, 1, null, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31))).thenReturn(emptyList())
+        `when`(
+            budgetItemRepository.findPlannedForCategoryAndMonth(
+                BudgetItemType.EXPENSE,
+                1,
+                null,
+                LocalDate.of(2025, 1, 1),
+                LocalDate.of(2025, 1, 31),
+            ),
+        ).thenReturn(plannedItems)
+        `when`(
+            budgetItemRepository.findUnplannedForCategoryAndMonth(
+                BudgetItemType.EXPENSE,
+                1,
+                null,
+                LocalDate.of(2025, 1, 1),
+                LocalDate.of(2025, 1, 31),
+            ),
+        ).thenReturn(emptyList())
         `when`(budgetItemRepository.save(any(BudgetItem::class.java))).thenAnswer { it.arguments[0] as BudgetItem }
 
         // when
@@ -315,19 +392,21 @@ class BudgetItemServiceTest {
         val month = "2025-02"
         val monthStart = LocalDate.of(2025, 2, 1)
         val monthEnd = LocalDate.of(2025, 2, 28)
-        val item = BudgetItem(
-            id = 10,
-            name = "Rent",
-            amount = BigDecimal("800"),
-            type = BudgetItemType.EXPENSE,
-            startDate = LocalDate.of(2025, 1, 1)
-        )
-        val suspension = BudgetItemSuspension(
-            id = 5,
-            budgetItem = item,
-            startDate = LocalDate.of(2025, 2, 1),
-            endDate = null
-        )
+        val item =
+            BudgetItem(
+                id = 10,
+                name = "Rent",
+                amount = BigDecimal("800"),
+                type = BudgetItemType.EXPENSE,
+                startDate = LocalDate.of(2025, 1, 1),
+            )
+        val suspension =
+            BudgetItemSuspension(
+                id = 5,
+                budgetItem = item,
+                startDate = LocalDate.of(2025, 2, 1),
+                endDate = null,
+            )
         `when`(budgetItemRepository.findEffectiveForMonth(BudgetItemType.EXPENSE, monthStart, monthEnd))
             .thenReturn(listOf(item))
         `when`(budgetItemSuspensionRepository.findActiveForItemsAndMonth(listOf(10L), monthStart, monthEnd))
@@ -343,14 +422,15 @@ class BudgetItemServiceTest {
 
     @Test
     fun `suspendExpense should create a suspension entry`() {
-        val item = BudgetItem(
-            id = 7,
-            name = "Rent",
-            amount = BigDecimal("800"),
-            type = BudgetItemType.EXPENSE,
-            startDate = LocalDate.of(2025, 1, 1),
-            endDate = LocalDate.of(2025, 12, 31)
-        )
+        val item =
+            BudgetItem(
+                id = 7,
+                name = "Rent",
+                amount = BigDecimal("800"),
+                type = BudgetItemType.EXPENSE,
+                startDate = LocalDate.of(2025, 1, 1),
+                endDate = LocalDate.of(2025, 12, 31),
+            )
         item.rootBudgetItem = item
         val request = SuspendBudgetItemRequest(startMonth = "2025-05", endMonth = "2025-06")
         `when`(budgetItemRepository.findById(7)).thenReturn(java.util.Optional.of(item))
@@ -358,10 +438,9 @@ class BudgetItemServiceTest {
             budgetItemSuspensionRepository.existsOverlapping(
                 7L,
                 LocalDate.of(2025, 5, 1),
-                LocalDate.of(2025, 6, 30)
-            )
-        )
-            .thenReturn(false)
+                LocalDate.of(2025, 6, 30),
+            ),
+        ).thenReturn(false)
         `when`(budgetItemSuspensionRepository.save(any(BudgetItemSuspension::class.java)))
             .thenAnswer { it.arguments[0] as BudgetItemSuspension }
 
@@ -374,27 +453,29 @@ class BudgetItemServiceTest {
 
     @Test
     fun `resumeSuspendedExpense should delete suspension when resume starts at suspension start`() {
-        val item = BudgetItem(
-            id = 7,
-            name = "Rent",
-            amount = BigDecimal("800"),
-            type = BudgetItemType.EXPENSE,
-            startDate = LocalDate.of(2025, 1, 1)
-        )
-        val suspension = BudgetItemSuspension(
-            id = 11,
-            budgetItem = item,
-            startDate = LocalDate.of(2025, 6, 1),
-            endDate = LocalDate.of(2025, 8, 31)
-        )
+        val item =
+            BudgetItem(
+                id = 7,
+                name = "Rent",
+                amount = BigDecimal("800"),
+                type = BudgetItemType.EXPENSE,
+                startDate = LocalDate.of(2025, 1, 1),
+            )
+        val suspension =
+            BudgetItemSuspension(
+                id = 11,
+                budgetItem = item,
+                startDate = LocalDate.of(2025, 6, 1),
+                endDate = LocalDate.of(2025, 8, 31),
+            )
         val request = ResumeBudgetItemRequest(startMonth = "2025-06")
         `when`(budgetItemRepository.findById(7)).thenReturn(java.util.Optional.of(item))
         `when`(
             budgetItemSuspensionRepository.findActiveForItemAndMonth(
                 7L,
                 LocalDate.of(2025, 6, 1),
-                LocalDate.of(2025, 6, 30)
-            )
+                LocalDate.of(2025, 6, 30),
+            ),
         ).thenReturn(listOf(suspension))
 
         budgetItemService.resumeSuspendedExpense(7, request)
@@ -404,27 +485,29 @@ class BudgetItemServiceTest {
 
     @Test
     fun `resumeSuspendedExpense should shorten suspension when resume starts later`() {
-        val item = BudgetItem(
-            id = 7,
-            name = "Rent",
-            amount = BigDecimal("800"),
-            type = BudgetItemType.EXPENSE,
-            startDate = LocalDate.of(2025, 1, 1)
-        )
-        val suspension = BudgetItemSuspension(
-            id = 11,
-            budgetItem = item,
-            startDate = LocalDate.of(2025, 6, 1),
-            endDate = LocalDate.of(2025, 8, 31)
-        )
+        val item =
+            BudgetItem(
+                id = 7,
+                name = "Rent",
+                amount = BigDecimal("800"),
+                type = BudgetItemType.EXPENSE,
+                startDate = LocalDate.of(2025, 1, 1),
+            )
+        val suspension =
+            BudgetItemSuspension(
+                id = 11,
+                budgetItem = item,
+                startDate = LocalDate.of(2025, 6, 1),
+                endDate = LocalDate.of(2025, 8, 31),
+            )
         val request = ResumeBudgetItemRequest(startMonth = "2025-07")
         `when`(budgetItemRepository.findById(7)).thenReturn(java.util.Optional.of(item))
         `when`(
             budgetItemSuspensionRepository.findActiveForItemAndMonth(
                 7L,
                 LocalDate.of(2025, 7, 1),
-                LocalDate.of(2025, 7, 31)
-            )
+                LocalDate.of(2025, 7, 31),
+            ),
         ).thenReturn(listOf(suspension))
         `when`(budgetItemSuspensionRepository.save(any(BudgetItemSuspension::class.java)))
             .thenAnswer { it.arguments[0] as BudgetItemSuspension }
@@ -438,20 +521,22 @@ class BudgetItemServiceTest {
 
     @Test
     fun `changeValueForPeriod should split item before and after`() {
-        val item = BudgetItem(
-            id = 4,
-            name = "Rent",
-            amount = BigDecimal("800"),
-            type = BudgetItemType.EXPENSE,
-            frequency = Frequency.MONTHLY,
-            startDate = LocalDate.of(2024, 1, 1),
-            endDate = LocalDate.of(2025, 12, 31)
-        )
-        val request = BudgetItemValueChangeRequest(
-            amount = BigDecimal("950"),
-            startMonth = "2025-06",
-            endMonth = "2025-08"
-        )
+        val item =
+            BudgetItem(
+                id = 4,
+                name = "Rent",
+                amount = BigDecimal("800"),
+                type = BudgetItemType.EXPENSE,
+                frequency = Frequency.MONTHLY,
+                startDate = LocalDate.of(2024, 1, 1),
+                endDate = LocalDate.of(2025, 12, 31),
+            )
+        val request =
+            BudgetItemValueChangeRequest(
+                amount = BigDecimal("950"),
+                startMonth = "2025-06",
+                endMonth = "2025-08",
+            )
         `when`(budgetItemRepository.findById(4)).thenReturn(java.util.Optional.of(item))
         `when`(budgetItemRepository.save(any(BudgetItem::class.java))).thenAnswer { it.arguments[0] as BudgetItem }
 
@@ -472,38 +557,41 @@ class BudgetItemServiceTest {
 
     @Test
     fun `changeValueForPeriod should apply to effective item for month`() {
-        val root = BudgetItem(
-            id = 10,
-            name = "Salary",
-            amount = BigDecimal("1000"),
-            type = BudgetItemType.INCOME,
-            frequency = Frequency.MONTHLY,
-            startDate = LocalDate.of(2024, 1, 1),
-            endDate = LocalDate.of(2024, 12, 31)
-        )
-        val future = BudgetItem(
-            id = 11,
-            name = "Salary",
-            amount = BigDecimal("1200"),
-            type = BudgetItemType.INCOME,
-            frequency = Frequency.MONTHLY,
-            startDate = LocalDate.of(2025, 1, 1),
-            endDate = LocalDate.of(2025, 12, 31),
-            rootBudgetItem = root
-        )
+        val root =
+            BudgetItem(
+                id = 10,
+                name = "Salary",
+                amount = BigDecimal("1000"),
+                type = BudgetItemType.INCOME,
+                frequency = Frequency.MONTHLY,
+                startDate = LocalDate.of(2024, 1, 1),
+                endDate = LocalDate.of(2024, 12, 31),
+            )
+        val future =
+            BudgetItem(
+                id = 11,
+                name = "Salary",
+                amount = BigDecimal("1200"),
+                type = BudgetItemType.INCOME,
+                frequency = Frequency.MONTHLY,
+                startDate = LocalDate.of(2025, 1, 1),
+                endDate = LocalDate.of(2025, 12, 31),
+                rootBudgetItem = root,
+            )
         root.rootBudgetItem = root
-        val request = BudgetItemValueChangeRequest(
-            amount = BigDecimal("1400"),
-            startMonth = "2025-06",
-            endMonth = "2025-06"
-        )
+        val request =
+            BudgetItemValueChangeRequest(
+                amount = BigDecimal("1400"),
+                startMonth = "2025-06",
+                endMonth = "2025-06",
+            )
         `when`(budgetItemRepository.findById(10)).thenReturn(java.util.Optional.of(root))
         `when`(
             budgetItemRepository.findEffectiveByRootForMonth(
                 10L,
                 LocalDate.of(2025, 6, 1),
-                LocalDate.of(2025, 6, 30)
-            )
+                LocalDate.of(2025, 6, 30),
+            ),
         ).thenReturn(future)
         `when`(budgetItemRepository.save(any(BudgetItem::class.java))).thenAnswer { it.arguments[0] as BudgetItem }
 
