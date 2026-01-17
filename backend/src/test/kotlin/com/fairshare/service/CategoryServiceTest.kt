@@ -66,7 +66,7 @@ class CategoryServiceTest {
         val request = CreateCategoryRequest("New Category", BudgetItemType.INCOME)
         val category = Category(1, "New Category", BudgetItemType.INCOME, 1)
         `when`(categoryRepository.findTopByOrderByRankDesc()).thenReturn(null)
-        `when`(categoryRepository.save(any(Category::class.java))).thenReturn(category)
+        `when`(categoryRepository.save(any(Category::class.java) ?: category)).thenReturn(category)
 
         // when
         val result = categoryService.create(request)
@@ -84,7 +84,7 @@ class CategoryServiceTest {
         val request = UpdateCategoryRequest("Updated Category")
         val category = Category(1, "Old Category", BudgetItemType.INCOME, 1)
         `when`(categoryRepository.findById(1)).thenReturn(java.util.Optional.of(category))
-        `when`(categoryRepository.save(any(Category::class.java))).thenAnswer { it.arguments[0] as Category }
+        `when`(categoryRepository.save(any(Category::class.java) ?: category)).thenAnswer { it.arguments[0] as Category }
 
         // when
         val result = categoryService.update(1, request)

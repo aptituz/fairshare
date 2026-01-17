@@ -122,16 +122,16 @@ class BudgetServiceTest {
                 emptyList()
             }
         }.`when`(budgetItemRepository).findEffectiveForMonthByPerson(
-            ArgumentMatchers.eq(BudgetItemType.EXPENSE),
+            ArgumentMatchers.eq(BudgetItemType.EXPENSE) ?: BudgetItemType.EXPENSE,
             ArgumentMatchers.isNull(),
-            ArgumentMatchers.any(LocalDate::class.java),
-            ArgumentMatchers.any(LocalDate::class.java),
+            ArgumentMatchers.any(LocalDate::class.java) ?: LocalDate.now(),
+            ArgumentMatchers.any(LocalDate::class.java) ?: LocalDate.now(),
         )
         `when`(
             budgetItemSuspensionRepository.findActiveForItemsAndMonth(
-                ArgumentMatchers.anyList(),
-                ArgumentMatchers.any(LocalDate::class.java),
-                ArgumentMatchers.any(LocalDate::class.java),
+                ArgumentMatchers.anyList<Long>() ?: emptyList(),
+                ArgumentMatchers.any(LocalDate::class.java) ?: LocalDate.now(),
+                ArgumentMatchers.any(LocalDate::class.java) ?: LocalDate.now(),
             ),
         ).thenReturn(emptyList())
 

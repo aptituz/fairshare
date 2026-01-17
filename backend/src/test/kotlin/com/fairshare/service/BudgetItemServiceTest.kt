@@ -106,9 +106,9 @@ class BudgetItemServiceTest {
             )
         `when`(
             budgetItemRepository.findDueDateItemsForYear(
-                anyList(),
-                any(LocalDate::class.java),
-                any(LocalDate::class.java),
+                anyList<Frequency>() ?: emptyList(),
+                any(LocalDate::class.java) ?: LocalDate.now(),
+                any(LocalDate::class.java) ?: LocalDate.now(),
             ),
         ).thenReturn(listOf(budgetItem))
 
