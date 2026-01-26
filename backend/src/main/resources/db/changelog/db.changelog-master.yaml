@@ -616,3 +616,77 @@ databaseChangeLog:
             oldColumnName: due_month
             newColumnName: due_date
             columnDataType: VARCHAR(7)
+
+  - changeSet:
+      id: 021-create-transactions
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        not:
+          tableExists:
+            tableName: transactions
+      changes:
+        - createTable:
+            tableName: transactions
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_transactions
+              - column:
+                  name: transaction_date
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: counterparty
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: purpose
+                  type: VARCHAR(500)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: amount
+                  type: NUMERIC(14,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: person_id
+                  type: BIGINT
+        - createIndex:
+            tableName: transactions
+            indexName: idx_transactions_date
+            columns:
+              - column:
+                  name: transaction_date
+        - createIndex:
+            tableName: transactions
+            indexName: idx_transactions_person
+            columns:
+              - column:
+                  name: person_id
+
+  - changeSet:
+      id: 021b-transactions-person-fk
+      author: codex
+      dbms: "!sqlite"
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: transactions
+            baseColumnNames: person_id
+            referencedTableName: persons
+            referencedColumnNames: id
+            constraintName: fk_transactions_person
+            validate: false
+            deferrable: false
+            initiallyDeferred: false
+            onDelete: SET NULL
+            onUpdate: RESTRICT
+            remarks: "SQLite ignores addForeignKeyConstraint in Liquibase."
