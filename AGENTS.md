@@ -17,6 +17,7 @@ Coding conventions:
 - Business logic should be covered by tests.
 - Each Kotlin class should have its own file.
 - All Kotlin code must be ktlint-clean.
+- Definition of done: run `backend/gradlew build` and fix any reported problems before finishing.
 - All API endpoints must be documented with springdoc OpenAPI annotations.
 - Definition of done: all API filters must use repository-level filtering (no in-memory filtering).
 - Controllers should stay lean by delegating business logic to service classes.
