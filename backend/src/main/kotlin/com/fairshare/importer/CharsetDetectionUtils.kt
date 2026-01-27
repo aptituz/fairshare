@@ -35,4 +35,3 @@ object CharsetDetectionUtils {
 
     fun decode(bytes: ByteArray): String = String(bytes, detectCharset(bytes))
 }
-

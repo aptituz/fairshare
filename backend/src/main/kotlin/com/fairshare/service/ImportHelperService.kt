@@ -25,15 +25,16 @@ class ImportHelperService(
     fun buildDescription(transaction: StandardTransaction): String {
         val parts =
             listOfNotNull(
-                transaction.counterpartyName?.trim()?.takeIf { it.isNotBlank() },
-                transaction.purpose?.trim()?.takeIf { it.isNotBlank() },
+                transaction.counterpartyName?.trim()?.takeIf(String::isNotBlank),
+                transaction.purpose?.trim()?.takeIf(String::isNotBlank),
             )
-        return parts.joinToString(" - ").ifBlank { "Unbekannte Transaktion" }
+        if (parts.isEmpty()) return "Unbekannte Transaktion"
+        return parts.joinToString(" - ")
     }
 
     fun deduplicationKey(
         date: LocalDate,
         amount: BigDecimal,
         description: String,
-    ): String = HashingUtils.sha256Hex("${date}|${amount.toPlainString()}|$description")
+    ): String = HashingUtils.sha256Hex("$date|${amount.toPlainString()}|$description")
 }
