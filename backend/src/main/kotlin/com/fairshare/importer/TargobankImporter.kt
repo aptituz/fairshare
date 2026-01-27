@@ -6,21 +6,29 @@
 package com.fairshare.importer
 
 import org.springframework.stereotype.Component
-import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
 
 @Component
 class TargobankImporter : BankImporter {
-    private val charset = Charset.forName("ISO-8859-1")
-
     override fun canHandle(filePath: Path): Boolean =
-        Files.newBufferedReader(filePath, charset).use { reader ->
-            reader.readLine()?.contains("Buchungstag;Wertstellung;Vorgang") == true
+        Files.readAllBytes(filePath).let { bytes ->
+            val charset = CharsetDetectionUtils.detectCharset(bytes)
+            String(bytes, charset)
+                .lineSequence()
+                .firstOrNull()
+                ?.trimEnd('\r')
+                ?.contains("Buchungstag;Wertstellung;Vorgang") == true
         }
 
     override fun parse(filePath: Path): List<StandardTransaction> {
-        val lines = Files.newBufferedReader(filePath, charset).use { it.readLines() }
+        val bytes = Files.readAllBytes(filePath)
+        val charset = CharsetDetectionUtils.detectCharset(bytes)
+        val lines =
+            String(bytes, charset)
+                .lineSequence()
+                .map { it.trimEnd('\r') }
+                .toList()
         if (lines.isEmpty()) return emptyList()
         val header = CsvParsingUtils.parseLine(lines.first(), ';').map { it.trim() }
         val indexMap = header.withIndex().associate { it.value to it.index }
