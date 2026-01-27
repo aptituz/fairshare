@@ -19,13 +19,7 @@ class DkbImporter : BankImporter {
     }
 
     override fun parse(filePath: Path): List<StandardTransaction> {
-        val bytes = Files.readAllBytes(filePath)
-        val charset = CharsetDetectionUtils.detectCharset(bytes)
-        val lines =
-            String(bytes, charset)
-                .lineSequence()
-                .map { it.trimEnd('\r') }
-                .toList()
+        val lines = CharsetDetectionUtils.readLines(filePath)
         val headerIndex = lines.indexOfFirst { it.contains("Buchungstag") }
         if (headerIndex == -1) return emptyList()
         val headerColumns = CsvParsingUtils.parseLine(lines[headerIndex], ';').map { it.trim() }

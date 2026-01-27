@@ -53,13 +53,7 @@ class TargobankImporter : BankImporter {
         }
 
     override fun parse(filePath: Path): List<StandardTransaction> {
-        val bytes = Files.readAllBytes(filePath)
-        val charset = CharsetDetectionUtils.detectCharset(bytes)
-        val lines =
-            String(bytes, charset)
-                .lineSequence()
-                .map { it.trimEnd('\r') }
-                .toList()
+        val lines = CharsetDetectionUtils.readLines(filePath)
         if (lines.isEmpty()) return emptyList()
         val firstLine = lines.first()
         val headerColumns = CsvParsingUtils.parseLine(firstLine, ';').map { it.trim() }

@@ -19,7 +19,9 @@ class ImportHelperService(
     private val importers: List<BankImporter>,
 ) {
     fun detectImporter(filePath: Path): BankImporter =
-        importers.firstOrNull { it.canHandle(filePath) }
+        importers.firstOrNull { importer ->
+            runCatching { importer.canHandle(filePath) }.getOrDefault(false)
+        }
             ?: throw BadRequestException("Unknown bank format")
 
     fun buildDescription(transaction: StandardTransaction): String {
