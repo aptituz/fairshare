@@ -616,3 +616,166 @@ databaseChangeLog:
             oldColumnName: due_month
             newColumnName: due_date
             columnDataType: VARCHAR(7)
+
+  - changeSet:
+      id: 021-create-import-batches
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        not:
+          tableExists:
+            tableName: import_batches
+      changes:
+        - createTable:
+            tableName: import_batches
+            columns:
+              - column:
+                  name: id
+                  type: INTEGER
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: person_id
+                  type: INTEGER
+              - column:
+                  name: import_date
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: file_name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: file_hash
+                  type: VARCHAR(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: record_count
+                  type: INTEGER
+              - column:
+                  name: status
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: error_message
+                  type: TEXT
+        - addForeignKeyConstraint:
+            baseTableName: import_batches
+            baseColumnNames: person_id
+            referencedTableName: persons
+            referencedColumnNames: id
+            constraintName: fk_import_batches_person
+            onDelete: SET NULL
+        - createIndex:
+            tableName: import_batches
+            indexName: idx_import_batches_file_hash
+            columns:
+              - column:
+                  name: person_id
+              - column:
+                  name: file_hash
+
+  - changeSet:
+      id: 022-create-transactions
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        onError: MARK_RAN
+        not:
+          tableExists:
+            tableName: transactions
+      changes:
+        - createTable:
+            tableName: transactions
+            columns:
+              - column:
+                  name: id
+                  type: INTEGER
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: person_id
+                  type: INTEGER
+              - column:
+                  name: import_batch_id
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+              - column:
+                  name: date
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: amount
+                  type: DECIMAL(19,4)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: raw_line
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: deduplication_key
+                  type: VARCHAR(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+        - addForeignKeyConstraint:
+            baseTableName: transactions
+            baseColumnNames: person_id
+            referencedTableName: persons
+            referencedColumnNames: id
+            constraintName: fk_transactions_person
+            onDelete: SET NULL
+        - addForeignKeyConstraint:
+            baseTableName: transactions
+            baseColumnNames: import_batch_id
+            referencedTableName: import_batches
+            referencedColumnNames: id
+            constraintName: fk_transactions_import_batch
+            onDelete: CASCADE
+        - addUniqueConstraint:
+            tableName: transactions
+            columnNames: deduplication_key
+            constraintName: uq_transactions_deduplication_key
+        - createIndex:
+            tableName: transactions
+            indexName: idx_transactions_person_date
+            columns:
+              - column:
+                  name: person_id
+              - column:
+                  name: date
+        - sql:
+            dbms: postgresql
+            sql: |
+              CREATE INDEX idx_transactions_shared_date
+              ON transactions (date DESC)
+              WHERE person_id IS NULL;
+        - createIndex:
+            dbms: "!postgresql"
+            tableName: transactions
+            indexName: idx_transactions_shared_date
+            columns:
+              - column:
+                  name: date

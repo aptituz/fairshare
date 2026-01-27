@@ -1,0 +1,3 @@
+Buchungsdatum;Wertstellung;Verwendungszweck;Betrag;Währung;Auftraggeber/Empfänger
+27.01.2025;27.01.2025;Kartenzahlung REWE;-12,34;EUR;REWE
+28.01.2025;28.01.2025;Gehalt Januar;2500,00;EUR;ACME GmbH
