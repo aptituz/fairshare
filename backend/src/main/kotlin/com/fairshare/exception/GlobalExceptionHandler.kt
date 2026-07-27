@@ -42,6 +42,15 @@ class GlobalExceptionHandler {
         return ResponseEntity(body, HttpStatus.BAD_REQUEST)
     }
 
+    @ExceptionHandler(UnauthorizedException::class)
+    fun handleUnauthorizedException(
+        ex: UnauthorizedException,
+        request: WebRequest,
+    ): ResponseEntity<Any> {
+        val body = mapOf("message" to ex.message)
+        return ResponseEntity(body, HttpStatus.UNAUTHORIZED)
+    }
+
     @ExceptionHandler(HttpMessageNotReadableException::class)
     fun handleMessageNotReadable(
         ex: HttpMessageNotReadableException,

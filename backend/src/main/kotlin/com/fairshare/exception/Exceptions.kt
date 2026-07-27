@@ -20,3 +20,8 @@ class ConflictException(
 class BadRequestException(
     message: String,
 ) : ApiException(message)
+
+class UnauthorizedException(
+    message: String,
+) : ApiException(message)
+

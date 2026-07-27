@@ -4,23 +4,13 @@
  */
 
 import { ref } from "vue";
-
-const apiBase = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
-const TOKEN_KEY = "fairshare.jwt";
-
-const request = async (path, options) => {
-  const token = typeof window !== "undefined" ? window.localStorage.getItem(TOKEN_KEY) : null;
-  const headers = {
-    ...(options?.headers || {}),
-    ...(token ? { Authorization: `Bearer ${token}` } : {})
-  };
-  const response = await fetch(`${apiBase}${path}`, { ...options, headers });
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || `Request failed with ${response.status}`);
-  }
-  return response.json();
-};
+import {
+  clearStoredToken,
+  hasStoredToken,
+  refreshAccessToken,
+  requestJson,
+  setStoredToken
+} from "./authHttp";
 
 export const useAuth = () => {
   const ready = ref(false);
@@ -29,29 +19,20 @@ export const useAuth = () => {
   const error = ref("");
 
   const setToken = (token) => {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(TOKEN_KEY, token);
-    }
+    setStoredToken(token);
   };
 
   const clearToken = () => {
-    if (typeof window !== "undefined") {
-      window.localStorage.removeItem(TOKEN_KEY);
-    }
+    clearStoredToken();
   };
 
-  const hasToken = () => {
-    if (typeof window === "undefined") {
-      return false;
-    }
-    return Boolean(window.localStorage.getItem(TOKEN_KEY));
-  };
+  const hasToken = () => hasStoredToken();
 
   const fetchStatus = async () => {
     loading.value = true;
     error.value = "";
     try {
-      const result = await request("/api/auth/status");
+      const result = await requestJson("/api/auth/status", { skipAuth: true });
       setupRequired.value = !result.ready;
       ready.value = true;
     } catch (err) {
@@ -67,8 +48,9 @@ export const useAuth = () => {
     loading.value = true;
     error.value = "";
     try {
-      const response = await request("/api/auth/setup", {
+      const response = await requestJson("/api/auth/setup", {
         method: "POST",
+        skipAuth: true,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password })
       });
@@ -87,8 +69,9 @@ export const useAuth = () => {
     loading.value = true;
     error.value = "";
     try {
-      const response = await request("/api/auth/login", {
+      const response = await requestJson("/api/auth/login", {
         method: "POST",
+        skipAuth: true,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password })
       });
@@ -104,7 +87,7 @@ export const useAuth = () => {
 
   const fetchMe = async () => {
     try {
-      return await request("/api/auth/me");
+      return await requestJson("/api/auth/me");
     } catch (err) {
       error.value = err?.message || "Benutzerdaten konnten nicht geladen werden.";
       return null;
@@ -115,7 +98,7 @@ export const useAuth = () => {
     loading.value = true;
     error.value = "";
     try {
-      await request("/api/auth/change-password", {
+      await requestJson("/api/auth/change-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ currentPassword, newPassword })
@@ -129,6 +112,23 @@ export const useAuth = () => {
     }
   };
 
+  const restoreSession = async () => {
+    if (hasToken()) {
+      return true;
+    }
+    return refreshAccessToken();
+  };
+
+  const logout = async () => {
+    try {
+      await requestJson("/api/auth/logout", { method: "POST" }, false);
+    } catch (_err) {
+      // Local cleanup still logs the user out if backend logout fails.
+    } finally {
+      clearToken();
+    }
+  };
+
   return {
     ready,
     setupRequired,
@@ -137,8 +137,10 @@ export const useAuth = () => {
     fetchStatus,
     setup,
     login,
+    restoreSession,
     fetchMe,
     changePassword,
+    logout,
     hasToken,
     clearToken
   };

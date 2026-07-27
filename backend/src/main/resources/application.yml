@@ -19,7 +19,9 @@ springdoc:
     path: /swagger-ui
 jwt:
   secret: ${JWT_SECRET:change-me-change-me-change-me-change-me}
-  expirationMinutes: ${JWT_EXPIRATION_MINUTES:720}
+  expirationMinutes: ${JWT_EXPIRATION_MINUTES:15}
+  refreshExpirationDays: ${JWT_REFRESH_EXPIRATION_DAYS:30}
+  refreshCookieName: ${JWT_REFRESH_COOKIE_NAME:fairshare_refresh}
 fairshare:
   cors:
     allowed-origins: ${FAIRSHARE_CORS_ALLOWED_ORIGINS:http://localhost:5173}

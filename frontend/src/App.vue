@@ -191,10 +191,11 @@ const {
   fetchStatus,
   setup,
   login,
+  restoreSession,
   fetchMe,
   changePassword,
+  logout: logoutSession,
   hasToken,
-  clearToken
 } = useAuth();
 
 const isAuthenticated = ref(false);
@@ -326,8 +327,8 @@ const handleAuthenticated = async () => {
   await refreshIfAuthenticated();
 };
 
-const logout = () => {
-  clearToken();
+const logout = async () => {
+  await logoutSession();
   isAuthenticated.value = false;
   currentUsername.value = "";
   currentName.value = "";
@@ -335,6 +336,7 @@ const logout = () => {
 
 onMounted(async () => {
   await fetchStatus();
+  await restoreSession();
   isAuthenticated.value = hasToken();
   authDialogOpen.value = !isAuthenticated.value;
   if (!isAuthenticated.value) {
