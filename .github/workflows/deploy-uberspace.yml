@@ -4,6 +4,9 @@ on:
   push:
     branches: ["main"]
 
+env:
+  FAIRSHARE_RELEASE_ID: ${{ github.run_id }}-${{ github.sha }}
+
 jobs:
   backend-tests:
     runs-on: ubuntu-latest
@@ -68,7 +71,8 @@ jobs:
           username: ${{ secrets.UBERSPACE_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            mkdir -p ~/fairshare ~/fairshare/logs ~/html
+            mkdir -p ~/fairshare/releases ~/fairshare/logs ~/fairshare/scripts ~/html ~/etc/services.d
+            mkdir -p ~/fairshare/releases/${{ env.FAIRSHARE_RELEASE_ID }}/frontend
 
       - name: Configure supervisord service
         uses: appleboy/ssh-action@v1.0.3
@@ -87,8 +91,8 @@ jobs:
           script: |
             cat > ~/etc/services.d/fairshare-backend.ini <<EOF
             [program:fairshare-backend]
-            command=java -jar %(ENV_HOME)s/fairshare/backend.jar --server.port=${FAIRSHARE_BACKEND_PORT} --server.servlet.context-path=/fairshare
-            directory=%(ENV_HOME)s/fairshare
+            command=java -jar %(ENV_HOME)s/fairshare/current/backend.jar --server.port=${FAIRSHARE_BACKEND_PORT} --server.servlet.context-path=/fairshare
+            directory=%(ENV_HOME)s/fairshare/current
             autostart=true
             autorestart=true
             startsecs=10
@@ -106,39 +110,38 @@ jobs:
           username: ${{ secrets.UBERSPACE_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: backend.jar
-          target: ~/fairshare
+          target: ~/fairshare/releases/${{ env.FAIRSHARE_RELEASE_ID }}/
 
       - name: Upload frontend assets
         uses: burnett01/rsync-deployments@7.0.1
         with:
           switches: -avzr --delete
           path: frontend/dist/
-          remote_path: ~/html/
+          remote_path: ~/fairshare/releases/${{ env.FAIRSHARE_RELEASE_ID }}/frontend/
           remote_host: ${{ secrets.UBERSPACE_HOST }}
           remote_user: ${{ secrets.UBERSPACE_USER }}
           remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Configure Apache routing
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Upload deploy script
+        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.UBERSPACE_HOST }}
           username: ${{ secrets.UBERSPACE_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cat > ~/html/.htaccess <<'EOF'
-            RewriteEngine On
-            
-            RewriteRule ^fairshare/api/ - [L]
-            RewriteCond %{REQUEST_FILENAME} !-f
-            RewriteCond %{REQUEST_FILENAME} !-d
-            RewriteRule . /index.html [L]
-            EOF
+          source: deploy/uberspace/deploy_release.sh
+          strip_components: 2
+          target: ~/fairshare/scripts/
 
-      - name: Activate backend jar
+      - name: Activate release with rollback
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          FAIRSHARE_RELEASE_ID: ${{ env.FAIRSHARE_RELEASE_ID }}
+          FAIRSHARE_HEALTHCHECK_URL: ${{ secrets.FAIRSHARE_HEALTHCHECK_URL }}
         with:
           host: ${{ secrets.UBERSPACE_HOST }}
           username: ${{ secrets.UBERSPACE_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: FAIRSHARE_RELEASE_ID,FAIRSHARE_HEALTHCHECK_URL
           script: |
-            supervisorctl restart fairshare-backend
+            chmod +x ~/fairshare/scripts/deploy_release.sh
+            ~/fairshare/scripts/deploy_release.sh
