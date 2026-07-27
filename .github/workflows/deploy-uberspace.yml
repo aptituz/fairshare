@@ -122,15 +122,161 @@ jobs:
           remote_user: ${{ secrets.UBERSPACE_USER }}
           remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Upload deploy script
-        uses: appleboy/scp-action@v0.1.7
+      - name: Install deploy script
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.UBERSPACE_HOST }}
           username: ${{ secrets.UBERSPACE_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: deploy/uberspace/deploy_release.sh
-          strip_components: 2
-          target: ~/fairshare/scripts/
+          script: |
+            cat > ~/fairshare/scripts/deploy_release.sh <<'EOF'
+            #!/usr/bin/env bash
+            set -euo pipefail
+
+            APP_ROOT="${HOME}/fairshare"
+            RELEASES_DIR="${APP_ROOT}/releases"
+            CURRENT_LINK="${APP_ROOT}/current"
+            PREVIOUS_LINK="${APP_ROOT}/previous"
+            PUBLIC_ROOT="${HOME}/html"
+            PUBLIC_LINK="${PUBLIC_ROOT}/fairshare"
+            SERVICE_NAME="fairshare-backend"
+            HEALTHCHECK_URL="${FAIRSHARE_HEALTHCHECK_URL:?FAIRSHARE_HEALTHCHECK_URL is required}"
+            RELEASE_ID="${FAIRSHARE_RELEASE_ID:?FAIRSHARE_RELEASE_ID is required}"
+            HEALTHCHECK_ATTEMPTS="${FAIRSHARE_HEALTHCHECK_ATTEMPTS:-24}"
+            HEALTHCHECK_DELAY_SECONDS="${FAIRSHARE_HEALTHCHECK_DELAY_SECONDS:-5}"
+            RELEASES_TO_KEEP="${FAIRSHARE_RELEASES_TO_KEEP:-5}"
+            RELEASE_DIR="${RELEASES_DIR}/${RELEASE_ID}"
+            BACKEND_JAR="${RELEASE_DIR}/backend.jar"
+            FRONTEND_DIR="${RELEASE_DIR}/frontend"
+            CURRENT_TARGET=""
+
+            log() {
+              printf '[deploy] %s\n' "$1"
+            }
+
+            fail() {
+              printf '[deploy] ERROR: %s\n' "$1" >&2
+              exit 1
+            }
+
+            ensure_release_contents() {
+              [ -f "$BACKEND_JAR" ] || fail "Missing backend jar at ${BACKEND_JAR}"
+              [ -f "${FRONTEND_DIR}/index.html" ] || fail "Missing frontend build at ${FRONTEND_DIR}"
+            }
+
+            write_frontend_htaccess() {
+              cat > "${FRONTEND_DIR}/.htaccess" <<'HTACCESS'
+            RewriteEngine On
+            RewriteBase /fairshare/
+
+            RewriteRule ^api/ - [L]
+            RewriteCond %{REQUEST_FILENAME} !-f
+            RewriteCond %{REQUEST_FILENAME} !-d
+            RewriteRule . /fairshare/index.html [L]
+            HTACCESS
+            }
+
+            capture_current_release() {
+              if [ -L "$CURRENT_LINK" ] && [ -e "$CURRENT_LINK" ]; then
+                CURRENT_TARGET="$(readlink "$CURRENT_LINK")"
+                ln -sfn "$CURRENT_TARGET" "$PREVIOUS_LINK"
+                log "Current release is ${CURRENT_TARGET}"
+              else
+                CURRENT_TARGET=""
+                log "No current release detected"
+              fi
+            }
+
+            point_live_release() {
+              ln -sfn "$RELEASE_DIR" "$CURRENT_LINK"
+              rm -rf "$PUBLIC_LINK"
+              ln -s "$RELEASE_DIR/frontend" "$PUBLIC_LINK"
+            }
+
+            restore_previous_release() {
+              if [ -z "$CURRENT_TARGET" ] || [ ! -d "$CURRENT_TARGET" ]; then
+                fail "Rollback required but no previous release is available"
+              fi
+              log "Rolling back to ${CURRENT_TARGET}"
+              ln -sfn "$CURRENT_TARGET" "$CURRENT_LINK"
+              rm -rf "$PUBLIC_LINK"
+              ln -s "$CURRENT_TARGET/frontend" "$PUBLIC_LINK"
+              supervisorctl restart "$SERVICE_NAME"
+            }
+
+            restart_backend() {
+              supervisorctl restart "$SERVICE_NAME"
+            }
+
+            wait_for_healthcheck() {
+              local attempt
+              for attempt in $(seq 1 "$HEALTHCHECK_ATTEMPTS"); do
+                if curl --fail --silent --show-error --max-time 10 "$HEALTHCHECK_URL" >/dev/null; then
+                  log "Health check succeeded on attempt ${attempt}/${HEALTHCHECK_ATTEMPTS}"
+                  return 0
+                fi
+                log "Health check failed on attempt ${attempt}/${HEALTHCHECK_ATTEMPTS}; waiting ${HEALTHCHECK_DELAY_SECONDS}s"
+                sleep "$HEALTHCHECK_DELAY_SECONDS"
+              done
+              return 1
+            }
+
+            cleanup_old_releases() {
+              local current_live_target
+              local old_release
+              local release_count
+              local releases_to_remove
+              local -a releases
+
+              if [ "$RELEASES_TO_KEEP" -lt 1 ]; then
+                return 0
+              fi
+
+              mapfile -t releases < <(find "$RELEASES_DIR" -mindepth 1 -maxdepth 1 -type d | sort)
+              release_count="${#releases[@]}"
+              if [ "$release_count" -le "$RELEASES_TO_KEEP" ]; then
+                return 0
+              fi
+
+              releases_to_remove=$((release_count - RELEASES_TO_KEEP))
+              current_live_target="$(readlink "$CURRENT_LINK")"
+
+              for ((i = 0; i < releases_to_remove; i += 1)); do
+                old_release="${releases[$i]}"
+                if [ -n "$CURRENT_TARGET" ] && [ "$old_release" = "$CURRENT_TARGET" ]; then
+                  continue
+                fi
+                if [ "$current_live_target" = "$old_release" ]; then
+                  continue
+                fi
+                rm -rf "$old_release"
+                log "Removed old release ${old_release}"
+              done
+            }
+
+            main() {
+              mkdir -p "$RELEASES_DIR" "$PUBLIC_ROOT"
+              ensure_release_contents
+              write_frontend_htaccess
+              capture_current_release
+              point_live_release
+              restart_backend
+
+              if wait_for_healthcheck; then
+                cleanup_old_releases
+                log "Deployment successful"
+                exit 0
+              fi
+
+              log "Health check did not recover in time"
+              restore_previous_release
+              log "Rollback finished; marking deployment as failed"
+              exit 1
+            }
+
+            main "$@"
+            EOF
+            chmod +x ~/fairshare/scripts/deploy_release.sh
 
       - name: Activate release with rollback
         uses: appleboy/ssh-action@v1.0.3
@@ -143,5 +289,4 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           envs: FAIRSHARE_RELEASE_ID,FAIRSHARE_HEALTHCHECK_URL
           script: |
-            chmod +x ~/fairshare/scripts/deploy_release.sh
             ~/fairshare/scripts/deploy_release.sh
