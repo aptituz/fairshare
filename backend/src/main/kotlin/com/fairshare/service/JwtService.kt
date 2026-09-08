@@ -21,19 +21,23 @@ class JwtService(
 ) {
     private val key = Keys.hmacShaKeyFor(secret.toByteArray(StandardCharsets.UTF_8))
 
-    fun generateToken(username: String): String {
+    fun generateToken(
+        username: String,
+        tokenVersion: Long,
+    ): String {
         val now = Instant.now()
         val expiry = now.plus(expirationMinutes, ChronoUnit.MINUTES)
         return Jwts
             .builder()
             .subject(username)
+            .claim("ver", tokenVersion)
             .issuedAt(Date.from(now))
             .expiration(Date.from(expiry))
             .signWith(key)
             .compact()
     }
 
-    fun parseUsername(token: String): String? =
+    fun parseToken(token: String): JwtTokenClaims? =
         try {
             Jwts
                 .parser()
@@ -41,7 +45,10 @@ class JwtService(
                 .build()
                 .parseSignedClaims(token)
                 .payload
-                .subject
+                .let { claims ->
+                    val version = claims["ver", Number::class.java]?.toLong() ?: return null
+                    JwtTokenClaims(username = claims.subject, tokenVersion = version)
+                }
         } catch (ex: Exception) {
             null
         }

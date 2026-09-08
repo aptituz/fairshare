@@ -9,4 +9,3 @@ data class RefreshTokenRotationResult(
     val personId: Long,
     val refreshToken: String,
 )
-

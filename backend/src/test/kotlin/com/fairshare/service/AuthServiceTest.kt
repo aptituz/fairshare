@@ -6,6 +6,7 @@
 package com.fairshare.service
 
 import com.fairshare.dto.AuthRequest
+import com.fairshare.dto.ChangePasswordRequest
 import com.fairshare.exception.UnauthorizedException
 import com.fairshare.model.Person
 import com.fairshare.repo.PersonRepository
@@ -42,14 +43,14 @@ class AuthServiceTest {
         val person = Person(id = 1L, name = "Person 1", username = "person1", passwordHash = "hash")
         `when`(personRepository.findByUsername("person1")).thenReturn(person)
         `when`(passwordService.verify("secret", "hash", null)).thenReturn(PasswordVerificationResult(matches = true))
-        `when`(jwtService.generateToken("person1")).thenReturn("access-token")
-        `when`(refreshTokenService.issueForPerson(1L)).thenReturn("refresh-token")
+        `when`(jwtService.generateToken("person1", 0)).thenReturn("access-token")
+        `when`(refreshTokenService.issueForPerson(1L, 0)).thenReturn("refresh-token")
 
         val result = authService.login(AuthRequest(username = "person1", password = "secret"))
 
         assertEquals("access-token", result.accessToken)
         assertEquals("refresh-token", result.refreshToken)
-        verify(refreshTokenService).issueForPerson(1L)
+        verify(refreshTokenService).issueForPerson(1L, 0)
     }
 
     @Test
@@ -58,7 +59,7 @@ class AuthServiceTest {
         val rotation = RefreshTokenRotationResult(personId = 2L, refreshToken = "new-refresh")
         `when`(refreshTokenService.rotate("old-refresh")).thenReturn(rotation)
         `when`(personRepository.findById(2L)).thenReturn(Optional.of(person))
-        `when`(jwtService.generateToken("person2")).thenReturn("new-access")
+        `when`(jwtService.generateToken("person2", 0)).thenReturn("new-access")
 
         val result = authService.refresh("old-refresh")
 
@@ -74,5 +75,28 @@ class AuthServiceTest {
             authService.refresh("bad-token")
         }
     }
-}
 
+    @Test
+    fun `password change should increment token version and revoke refresh sessions`() {
+        val person = Person(id = 3L, name = "Person 3", username = "person3", passwordHash = "old-hash", tokenVersion = 4)
+        org.springframework.security.core.context.SecurityContextHolder
+            .getContext()
+            .authentication =
+            org.springframework.security.authentication
+                .UsernamePasswordAuthenticationToken("person3", null, emptyList())
+        `when`(personRepository.findByUsername("person3")).thenReturn(person)
+        `when`(passwordService.verify("old", "old-hash", null)).thenReturn(PasswordVerificationResult(matches = true))
+        `when`(passwordService.encode("new")).thenReturn("new-hash")
+
+        try {
+            authService.changePassword(ChangePasswordRequest(currentPassword = "old", newPassword = "new"))
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder
+                .clearContext()
+        }
+
+        assertEquals(5L, person.tokenVersion)
+        assertEquals("new-hash", person.passwordHash)
+        verify(refreshTokenService).revokeAllForPerson(3L)
+    }
+}

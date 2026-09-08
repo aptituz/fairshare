@@ -20,7 +20,7 @@ springdoc:
 jwt:
   secret: ${JWT_SECRET:change-me-change-me-change-me-change-me}
   expirationMinutes: ${JWT_EXPIRATION_MINUTES:15}
-  refreshExpirationDays: ${JWT_REFRESH_EXPIRATION_DAYS:30}
+  refreshExpirationDays: ${JWT_REFRESH_EXPIRATION_DAYS:15}
   refreshCookieName: ${JWT_REFRESH_COOKIE_NAME:fairshare_refresh}
 fairshare:
   cors:
