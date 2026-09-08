@@ -5,7 +5,7 @@
 
 package com.fairshare.service
 
-data class AuthSessionTokens(
-    val accessToken: String,
-    val refreshToken: String,
+data class JwtTokenClaims(
+    val username: String,
+    val tokenVersion: Long,
 )

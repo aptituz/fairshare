@@ -678,3 +678,25 @@ databaseChangeLog:
               - column:
                   name: expires_at
 
+  - changeSet:
+      id: 022-add-token-versions
+      author: codex
+      changes:
+        - addColumn:
+            tableName: persons
+            columns:
+              - column:
+                  name: token_version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: refresh_tokens
+            columns:
+              - column:
+                  name: token_version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false

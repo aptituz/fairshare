@@ -13,6 +13,7 @@ import com.fairshare.dto.SetupPasswordRequest
 import com.fairshare.exception.BadRequestException
 import com.fairshare.exception.NotFoundException
 import com.fairshare.exception.UnauthorizedException
+import com.fairshare.model.Person
 import com.fairshare.repo.PersonRepository
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Service
@@ -42,10 +43,7 @@ class AuthService(
         person.passwordSalt = null
         person.passwordHash = hash
         personRepository.save(person)
-        return issueSessionTokens(
-            person.id ?: throw BadRequestException("User id missing"),
-            person.username,
-        )
+        return issueSessionTokens(person)
     }
 
     fun login(request: AuthRequest): AuthSessionTokens {
@@ -67,10 +65,7 @@ class AuthService(
             person.passwordSalt = null
             personRepository.save(person)
         }
-        return issueSessionTokens(
-            person.id ?: throw BadRequestException("User id missing"),
-            person.username,
-        )
+        return issueSessionTokens(person)
     }
 
     fun refresh(refreshToken: String): AuthSessionTokens {
@@ -82,7 +77,7 @@ class AuthService(
                 NotFoundException("User ${rotation.personId} not found")
             }
         return AuthSessionTokens(
-            accessToken = jwtService.generateToken(person.username),
+            accessToken = jwtService.generateToken(person.username, person.tokenVersion),
             refreshToken = rotation.refreshToken,
         )
     }
@@ -121,7 +116,9 @@ class AuthService(
         val newHash = passwordService.encode(request.newPassword)
         person.passwordSalt = null
         person.passwordHash = newHash
+        person.tokenVersion += 1
         personRepository.save(person)
+        refreshTokenService.revokeAllForPerson(person.id ?: throw BadRequestException("User id missing"))
     }
 
     private fun resolveAuthenticatedUsername(): String {
@@ -146,15 +143,15 @@ class AuthService(
         val newHash = passwordService.encode(newPassword)
         person.passwordSalt = null
         person.passwordHash = newHash
+        person.tokenVersion += 1
         personRepository.save(person)
+        refreshTokenService.revokeAllForPerson(person.id ?: throw BadRequestException("User id missing"))
     }
 
-    private fun issueSessionTokens(
-        personId: Long,
-        username: String,
-    ): AuthSessionTokens {
-        val accessToken = jwtService.generateToken(username)
-        val refreshToken = refreshTokenService.issueForPerson(personId)
+    private fun issueSessionTokens(person: Person): AuthSessionTokens {
+        val personId = person.id ?: throw BadRequestException("User id missing")
+        val accessToken = jwtService.generateToken(person.username, person.tokenVersion)
+        val refreshToken = refreshTokenService.issueForPerson(personId, person.tokenVersion)
         return AuthSessionTokens(accessToken = accessToken, refreshToken = refreshToken)
     }
 }

@@ -16,7 +16,7 @@ import java.time.Duration
 @Service
 class RefreshTokenCookieService(
     @Value("\${jwt.refreshCookieName:fairshare_refresh}") private val cookieName: String,
-    @Value("\${jwt.refreshExpirationDays:30}") private val refreshExpirationDays: Long,
+    @Value("\${jwt.refreshExpirationDays:15}") private val refreshExpirationDays: Long,
 ) {
     fun readRefreshToken(request: HttpServletRequest): String? =
         request.cookies
@@ -63,4 +63,3 @@ class RefreshTokenCookieService(
         return request.isSecure || forwardedProto.equals("https", ignoreCase = true)
     }
 }
-
