@@ -63,4 +63,3 @@ class RefreshTokenCookieService(
         return request.isSecure || forwardedProto.equals("https", ignoreCase = true)
     }
 }
-

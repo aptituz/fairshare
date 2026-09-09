@@ -80,4 +80,3 @@ class RefreshTokenService(
         return hashBytes.joinToString("") { "%02x".format(it) }
     }
 }
-

@@ -30,4 +30,3 @@ class RefreshToken(
     @Column(name = "revoked_at")
     var revokedAt: Instant? = null,
 )
-

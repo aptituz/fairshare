@@ -14,7 +14,7 @@ import java.util.Base64
 class PasswordService(
     private val passwordEncoder: PasswordEncoder,
 ) {
-    fun encode(password: String): String = passwordEncoder.encode(password)
+    fun encode(password: String): String = requireNotNull(passwordEncoder.encode(password))
 
     fun verify(
         password: String,

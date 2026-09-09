@@ -24,4 +24,3 @@ class BadRequestException(
 class UnauthorizedException(
     message: String,
 ) : ApiException(message)
-
