@@ -14,7 +14,6 @@ import com.fairshare.model.Frequency
 import com.fairshare.security.JwtAuthFilter
 import com.fairshare.security.SecurityConfig
 import com.fairshare.service.DataTransferService
-import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -26,32 +25,33 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
-import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
-import org.springframework.boot.test.mock.mockito.MockBean
+import org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterAutoConfiguration
+import org.springframework.boot.security.autoconfigure.web.servlet.ServletWebSecurityAutoConfiguration
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
 import org.springframework.security.test.context.support.WithMockUser
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
+import tools.jackson.databind.ObjectMapper
 import java.math.BigDecimal
 import java.time.LocalDate
 
 @WebMvcTest(DataTransferController::class)
 @AutoConfigureMockMvc
-@ImportAutoConfiguration(SecurityAutoConfiguration::class, SecurityFilterAutoConfiguration::class)
+@ImportAutoConfiguration(ServletWebSecurityAutoConfiguration::class, SecurityFilterAutoConfiguration::class)
 @Import(SecurityConfig::class)
 class DataTransferControllerTest(
     @Autowired private val mockMvc: MockMvc,
     @Autowired private val objectMapper: ObjectMapper,
 ) {
-    @MockBean
+    @MockitoBean
     private lateinit var dataTransferService: DataTransferService
 
-    @MockBean
+    @MockitoBean
     private lateinit var jwtAuthFilter: JwtAuthFilter
 
     @BeforeEach
