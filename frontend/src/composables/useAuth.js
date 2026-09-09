@@ -113,9 +113,6 @@ export const useAuth = () => {
   };
 
   const restoreSession = async () => {
-    if (hasToken()) {
-      return true;
-    }
     return refreshAccessToken();
   };
 

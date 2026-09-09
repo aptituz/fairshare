@@ -115,7 +115,7 @@ class DataTransferControllerTest(
         mockMvc
             .get("/api/data/export")
             .andExpect {
-                status { isForbidden() }
+                status { isUnauthorized() }
             }
     }
 
@@ -160,7 +160,7 @@ class DataTransferControllerTest(
                 contentType = MediaType.APPLICATION_JSON
                 content = objectMapper.writeValueAsString(payload)
             }.andExpect {
-                status { isForbidden() }
+                status { isUnauthorized() }
             }
     }
 }

@@ -23,6 +23,8 @@ class RefreshToken(
     var tokenHash: String,
     @Column(name = "person_id", nullable = false)
     var personId: Long,
+    @Column(name = "token_version", nullable = false)
+    var tokenVersion: Long,
     @Column(name = "expires_at", nullable = false)
     var expiresAt: Instant,
     @Column(name = "created_at", nullable = false)

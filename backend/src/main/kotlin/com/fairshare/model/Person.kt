@@ -26,4 +26,6 @@ class Person(
     var passwordHash: String? = null,
     @Column(name = "password_salt", length = 64)
     var passwordSalt: String? = null,
+    @Column(name = "token_version", nullable = false)
+    var tokenVersion: Long = 0,
 )
