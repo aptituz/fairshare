@@ -35,7 +35,7 @@ dependencies {
     developmentOnly("org.springframework.boot:spring-boot-devtools")
 
     runtimeOnly("org.postgresql:postgresql:42.7.9")
-    runtimeOnly("com.mysql:mysql-connector-j:9.7.0")
+    runtimeOnly("com.mysql:mysql-connector-j:26.7.0")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
