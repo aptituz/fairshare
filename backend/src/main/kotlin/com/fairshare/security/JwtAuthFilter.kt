@@ -33,7 +33,9 @@ class JwtAuthFilter(
                 val person = personRepository.findByUsername(claims.username)
                 if (person != null && person.tokenVersion == claims.tokenVersion) {
                     val auth = UsernamePasswordAuthenticationToken(claims.username, null, emptyList())
-                    SecurityContextHolder.getContext().authentication = auth
+                    val context = SecurityContextHolder.createEmptyContext()
+                    context.authentication = auth
+                    SecurityContextHolder.setContext(context)
                 }
             }
         }
