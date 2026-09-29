@@ -41,6 +41,7 @@ class JwtAuthFilterTest {
         filter.doFilter(request, MockHttpServletResponse(), MockFilterChain())
 
         assertEquals("alex", SecurityContextHolder.getContext().authentication?.name)
+        assertEquals("authenticated", request.getAttribute("fairshare.authOutcome"))
     }
 
     @Test
@@ -54,5 +55,25 @@ class JwtAuthFilterTest {
         filter.doFilter(request, MockHttpServletResponse(), MockFilterChain())
 
         assertNull(SecurityContextHolder.getContext().authentication)
+        assertEquals("stale_token_version", request.getAttribute("fairshare.authOutcome"))
+    }
+
+    @Test
+    fun `missing invalid and unknown credentials have distinct outcomes`() {
+        val cases =
+            listOf(
+                null to "missing_header",
+                "Basic private" to "unsupported_scheme",
+                "Bearer invalid" to "invalid_token",
+                "Bearer unknown" to "unknown_user",
+            )
+        `when`(jwtService.parseToken("unknown")).thenReturn(JwtTokenClaims("unknown", 0))
+        for ((header, outcome) in cases) {
+            val request = MockHttpServletRequest()
+            if (header != null) request.addHeader("Authorization", header)
+            filter.doFilter(request, MockHttpServletResponse(), MockFilterChain())
+            assertEquals(outcome, request.getAttribute("fairshare.authOutcome"))
+            assertNull(SecurityContextHolder.getContext().authentication)
+        }
     }
 }

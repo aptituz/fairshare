@@ -8,9 +8,21 @@ export const TOKEN_KEY = "fairshare.jwt";
 
 let refreshPromise = null;
 
-const readErrorMessage = async (response) => {
+const readErrorMessage = async (response, path, method) => {
   const text = await response.text();
-  return text || `Request failed with ${response.status}`;
+  const requestId = response.headers.get("X-Request-ID");
+  return `${text || `Request failed with ${response.status}`} (${method} ${path.split("?")[0]}${requestId ? `; request ID: ${requestId}` : ""})`;
+};
+
+// Do not include credentials, bodies or query parameters in diagnostics.
+const reportFailure = (response, path, method, phase) => {
+  console.warn("Fairshare API request failed", {
+    method,
+    path: path.split("?")[0],
+    status: response.status,
+    requestId: response.headers.get("X-Request-ID"),
+    phase
+  });
 };
 
 export const getStoredToken = () =>
@@ -40,6 +52,7 @@ export const refreshAccessToken = async () => {
       credentials: "include"
     });
     if (!response.ok) {
+      reportFailure(response, "/api/auth/refresh", "POST", "refresh");
       clearStoredToken();
       return false;
     }
@@ -79,6 +92,10 @@ export const requestJson = async (path, options = {}, allowRefreshRetry = true) 
     credentials: "include"
   });
 
+  if (!response.ok) {
+    reportFailure(response, path, fetchOptions.method || "GET", allowRefreshRetry ? "initial" : "retry");
+  }
+
   if (response.status === 401 && allowRefreshRetry && shouldRetryOnUnauthorized(path)) {
     const refreshed = await refreshAccessToken();
     if (refreshed) {
@@ -87,11 +104,10 @@ export const requestJson = async (path, options = {}, allowRefreshRetry = true) 
   }
 
   if (!response.ok) {
-    throw new Error(await readErrorMessage(response));
+    throw new Error(await readErrorMessage(response, path, fetchOptions.method || "GET"));
   }
   if (response.status === 204) {
     return null;
   }
   return response.json();
 };
-
