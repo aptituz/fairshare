@@ -15,12 +15,14 @@ import com.fairshare.model.SavingsAccount
 import com.fairshare.repo.PersonRepository
 import com.fairshare.repo.SavingsAccountRepository
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 @Service
 class SavingsAccountService(
     private val savingsAccountRepository: SavingsAccountRepository,
     private val personRepository: PersonRepository,
 ) {
+    @Transactional(readOnly = true)
     fun list(): List<SavingsAccountResponse> = savingsAccountRepository.findAll().map { it.toResponse() }
 
     fun create(request: CreateSavingsAccountRequest): SavingsAccountResponse {
