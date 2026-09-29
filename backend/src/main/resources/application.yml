@@ -25,3 +25,7 @@ jwt:
 fairshare:
   cors:
     allowed-origins: ${FAIRSHARE_CORS_ALLOWED_ORIGINS:http://localhost:5173}
+logging:
+  level:
+    com.fairshare.security.RequestDiagnosticsFilter: ${FAIRSHARE_HTTP_LOG_LEVEL:INFO}
+    com.fairshare.service.JwtService: ${FAIRSHARE_JWT_LOG_LEVEL:INFO}

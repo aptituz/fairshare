@@ -26,18 +26,28 @@ class JwtAuthFilter(
         filterChain: FilterChain,
     ) {
         val header = request.getHeader("Authorization") ?: ""
+        request.setAttribute("fairshare.authOutcome", if (header.isEmpty()) "missing_header" else "unsupported_scheme")
         if (header.startsWith("Bearer ")) {
             val token = header.removePrefix("Bearer ").trim()
             val claims = jwtService.parseToken(token)
+            request.setAttribute("fairshare.authOutcome", "invalid_token")
             if (claims != null && SecurityContextHolder.getContext().authentication == null) {
                 val person = personRepository.findByUsername(claims.username)
+                request.setAttribute(
+                    "fairshare.authOutcome",
+                    if (person == null) "unknown_user" else "stale_token_version",
+                )
                 if (person != null && person.tokenVersion == claims.tokenVersion) {
                     val auth = UsernamePasswordAuthenticationToken(claims.username, null, emptyList())
                     val context = SecurityContextHolder.createEmptyContext()
                     context.authentication = auth
                     SecurityContextHolder.setContext(context)
+                    request.setAttribute("fairshare.authOutcome", "authenticated")
                 }
             }
+        }
+        if (SecurityContextHolder.getContext().authentication?.isAuthenticated == true) {
+            request.setAttribute("fairshare.authOutcome", "authenticated")
         }
         filterChain.doFilter(request, response)
     }

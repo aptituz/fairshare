@@ -5,6 +5,7 @@
 
 package com.fairshare.security
 
+import com.fairshare.config.WebConfig
 import com.fairshare.controller.AuthController
 import com.fairshare.dto.AuthUserResponse
 import com.fairshare.model.Person
@@ -13,23 +14,29 @@ import com.fairshare.service.AuthService
 import com.fairshare.service.JwtService
 import com.fairshare.service.JwtTokenClaims
 import com.fairshare.service.RefreshTokenCookieService
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mockito.`when`
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration
 import org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterAutoConfiguration
 import org.springframework.boot.security.autoconfigure.web.servlet.ServletWebSecurityAutoConfiguration
+import org.springframework.boot.test.system.CapturedOutput
+import org.springframework.boot.test.system.OutputCaptureExtension
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
+import org.springframework.test.web.servlet.post
 
 @WebMvcTest(AuthController::class)
 @AutoConfigureMockMvc
 @ImportAutoConfiguration(ServletWebSecurityAutoConfiguration::class, SecurityFilterAutoConfiguration::class)
-@Import(SecurityConfig::class, JwtAuthFilter::class)
+@Import(SecurityConfig::class, JwtAuthFilter::class, RequestDiagnosticsFilter::class, WebConfig::class)
+@ExtendWith(OutputCaptureExtension::class)
 class JwtAuthenticationIntegrationTest(
     @Autowired private val mockMvc: MockMvc,
 ) {
@@ -57,7 +64,36 @@ class JwtAuthenticationIntegrationTest(
                 header("Authorization", "Bearer valid-token")
             }.andExpect {
                 status { isOk() }
+                header { exists("X-Request-ID") }
                 jsonPath("$.username") { value("alex") }
             }
+    }
+
+    @Test
+    fun `security rejection is logged before controller with correlated id`(output: CapturedOutput) {
+        val result =
+            mockMvc
+                .get("/api/savings-accounts") {
+                    header("Origin", "http://localhost:5173")
+                }.andExpect {
+                    status { isUnauthorized() }
+                    header { exists("X-Request-ID") }
+                    header { string("Access-Control-Expose-Headers", "X-Request-ID") }
+                }.andReturn()
+
+        assertTrue(output.out.contains("requestId=${result.response.getHeader("X-Request-ID")}"))
+        assertTrue(output.out.contains("path=/api/savings-accounts status=401"))
+        assertTrue(output.out.contains("auth=missing_header"))
+    }
+
+    @Test
+    fun `controller refresh rejection is also logged`(output: CapturedOutput) {
+        mockMvc.post("/api/auth/refresh").andExpect {
+            status { isUnauthorized() }
+            header { exists("X-Request-ID") }
+        }
+
+        assertTrue(output.out.contains("path=/api/auth/refresh status=401"))
+        assertTrue(output.out.contains("refreshCookiePresent=false"))
     }
 }

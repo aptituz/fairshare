@@ -7,6 +7,8 @@ package com.fairshare.service
 
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.security.Keys
+import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import java.nio.charset.StandardCharsets
@@ -20,6 +22,7 @@ class JwtService(
     @Value("\${jwt.expirationMinutes}") private val expirationMinutes: Long,
 ) {
     private val key = Keys.hmacShaKeyFor(secret.toByteArray(StandardCharsets.UTF_8))
+    private val log = LoggerFactory.getLogger(javaClass)
 
     fun generateToken(
         username: String,
@@ -46,10 +49,16 @@ class JwtService(
                 .parseSignedClaims(token)
                 .payload
                 .let { claims ->
-                    val version = claims["ver", Number::class.java]?.toLong() ?: return null
+                    val version = claims["ver", Number::class.java]?.toLong()
+                    if (version == null) {
+                        log.debug("JWT validation failed requestId={} reason=missing_token_version", MDC.get("requestId"))
+                        return null
+                    }
                     JwtTokenClaims(username = claims.subject, tokenVersion = version)
                 }
         } catch (ex: Exception) {
+            // Exception messages can contain claims; only record the exception type.
+            log.debug("JWT validation failed requestId={} reason={}", MDC.get("requestId"), ex.javaClass.simpleName)
             null
         }
 }
