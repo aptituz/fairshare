@@ -1,6 +1,5 @@
 plugins {
     id("org.springframework.boot") version "4.1.1"
-    id("io.spring.dependency-management") version "1.1.7"
     kotlin("jvm") version "2.4.20"
     kotlin("plugin.spring") version "2.4.20"
     kotlin("plugin.jpa") version "2.4.20"
@@ -21,6 +20,10 @@ repositories {
 }
 
 dependencies {
+    // Scope application dependency management so ktlint retains its compatible Kotlin compiler.
+    implementation(platform(org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES))
+    implementation(platform(kotlin("bom")))
+
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-security")
@@ -32,6 +35,7 @@ dependencies {
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.1")
     implementation("org.liquibase:liquibase-core")
 
+    developmentOnly(platform(org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES))
     developmentOnly("org.springframework.boot:spring-boot-devtools")
 
     runtimeOnly("org.postgresql:postgresql:42.7.13")
