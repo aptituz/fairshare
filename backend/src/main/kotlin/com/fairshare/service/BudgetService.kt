@@ -15,6 +15,7 @@ import com.fairshare.repo.BudgetItemRepository
 import com.fairshare.repo.BudgetItemSuspensionRepository
 import com.fairshare.repo.PersonRepository
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
 import java.time.YearMonth
 
@@ -27,6 +28,7 @@ class BudgetService(
 ) {
     private val log = org.slf4j.LoggerFactory.getLogger(BudgetService::class.java)
 
+    @Transactional(readOnly = true)
     fun monthlySummary(month: YearMonth): MonthlySummaryResponse {
         val monthStart = month.atDay(1)
         val monthEnd = month.atEndOfMonth()

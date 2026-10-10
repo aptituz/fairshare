@@ -14,6 +14,7 @@ import com.fairshare.service.AuthService
 import com.fairshare.service.JwtService
 import com.fairshare.service.JwtTokenClaims
 import com.fairshare.service.RefreshTokenCookieService
+import jakarta.servlet.DispatcherType
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -51,6 +52,27 @@ class JwtAuthenticationIntegrationTest(
 
     @MockitoBean
     private lateinit var personRepository: PersonRepository
+
+    @Test
+    fun `error dispatch is not replaced with unauthorized`() {
+        mockMvc
+            .get("/error") {
+                with { request ->
+                    request.dispatcherType = DispatcherType.ERROR
+                    request
+                }
+                requestAttr("jakarta.servlet.error.status_code", 500)
+            }.andExpect {
+                status { isInternalServerError() }
+            }
+    }
+
+    @Test
+    fun `direct error request still requires authentication`() {
+        mockMvc.get("/error").andExpect {
+            status { isUnauthorized() }
+        }
+    }
 
     @Test
     fun `bearer token authenticates protected endpoint`() {
