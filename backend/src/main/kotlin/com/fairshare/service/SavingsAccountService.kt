@@ -53,6 +53,7 @@ class SavingsAccountService(
         return saved.toResponse()
     }
 
+    @Transactional
     fun update(
         id: Long,
         request: UpdateSavingsAccountRequest,

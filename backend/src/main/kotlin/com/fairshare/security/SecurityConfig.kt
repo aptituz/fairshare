@@ -5,6 +5,7 @@
 
 package com.fairshare.security
 
+import jakarta.servlet.DispatcherType
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -38,6 +39,8 @@ class SecurityConfig(
                 }
             }.authorizeHttpRequests {
                 it
+                    .dispatcherTypeMatchers(DispatcherType.ERROR)
+                    .permitAll()
                     .requestMatchers(
                         "/api/auth/status",
                         "/api/auth/setup",

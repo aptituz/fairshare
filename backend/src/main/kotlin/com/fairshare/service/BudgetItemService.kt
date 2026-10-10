@@ -28,11 +28,13 @@ import com.fairshare.repo.BudgetItemSuspensionRepository
 import com.fairshare.repo.CategoryRepository
 import com.fairshare.repo.PersonRepository
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.YearMonth
 
 @Service
+@Transactional
 class BudgetItemService(
     private val budgetItemRepository: BudgetItemRepository,
     private val budgetItemSuspensionRepository: BudgetItemSuspensionRepository,
@@ -46,6 +48,7 @@ class BudgetItemService(
             Frequency.YEARLY,
         )
 
+    @Transactional(readOnly = true)
     fun list(
         type: BudgetItemType?,
         month: String?,
@@ -63,6 +66,7 @@ class BudgetItemService(
         return items.map { it.toResponse() }
     }
 
+    @Transactional(readOnly = true)
     fun historyWithSuspensions(id: Long): List<BudgetItemHistoryEntryResponse> {
         val budgetItem =
             budgetItemRepository.findById(id).orElseThrow {
@@ -131,6 +135,7 @@ class BudgetItemService(
             )
     }
 
+    @Transactional(readOnly = true)
     fun dueDatesForYear(year: Int): List<BudgetItemDueDatesResponse> {
         val yearStart = LocalDate.of(year, 1, 1)
         val yearEnd = LocalDate.of(year, 12, 31)
@@ -150,6 +155,7 @@ class BudgetItemService(
         }
     }
 
+    @Transactional(readOnly = true)
     fun dueDatesForItem(
         id: Long,
         year: Int,
